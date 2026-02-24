@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import OpenSeadragon from 'openseadragon';
-import type { Permit, FilterState, MapConfig } from './types';
-import { latlngToQuadrantCoords, quadrantToImagePixel } from './coordinates';
+import type { Permit, FilterState } from './types';
+import { latlngToImagePx, IMAGE_DIMS } from './coordinates';
 import {
   fetchPermits,
   getJobColor,
@@ -16,15 +16,6 @@ import './App.css';
 
 // Generation config from the isometric.nyc repo (tiny-nyc / production)
 // These values come from generation_config.json and define the coordinate system
-const MAP_CONFIG: MapConfig = {
-  seed: { lat: 40.7484, lng: -73.9857 }, // ~Empire State Building area
-  camera_azimuth_degrees: -15,
-  camera_elevation_degrees: -45,
-  width_px: 1024,
-  height_px: 1024,
-  view_height_meters: 300,
-  tile_step: 0.5,
-};
 
 // Tile server: isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files/{level}/{x}_{y}.webp
 // Custom zoom convention: level 0 = most zoomed out, level 8 = full resolution
@@ -83,7 +74,6 @@ export default function App() {
 
   // Calibrated from 2 points: 462 First Ave + 109 Rockaway Point Blvd
   // mpp_x=0.4293 (440m wide), mpp_y=0.2930 (300m tall), seed=(45142, 43740)
-  const [seedFrac] = useState({ x: 45142 / 123904, y: 43740 / 100864 });
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
@@ -180,43 +170,20 @@ export default function App() {
     });
     overlayMarkersRef.current.clear();
 
-    const imageWidth = dziDimensions.width;
-    const imageHeight = dziDimensions.height;
-
-    // Seed point (40.7484, -73.9857) = quadrant (0,0) in generation space.
-    // We need to know where qx=0, qy=0 sits in the full assembled image.
-    // Full image: 123904 x 100864 px = 242 x 197 quadrants at 512px each.
-    //
-    // Calibration via URL params: ?sx=0.33&sy=0.35
-    // Use a known address from the ticker and adjust until it lines up.
-    const urlParams = new URLSearchParams(window.location.search);
-    const sxParam = urlParams.get('sx');
-    const syParam = urlParams.get('sy');
-    const seedFracX = sxParam ? parseFloat(sxParam) : seedFrac.x;
-    const seedFracY = syParam ? parseFloat(syParam) : seedFrac.y;
-
-    const seedImageX = imageWidth * seedFracX;
-    const seedImageY = imageHeight * seedFracY;
-
     let placed = 0;
     filteredPermits.forEach(permit => {
       const lat = parseFloat(permit.gis_latitude ?? '');
       const lng = parseFloat(permit.gis_longitude ?? '');
       if (isNaN(lat) || isNaN(lng)) return;
 
-      const { qx, qy } = latlngToQuadrantCoords(MAP_CONFIG, lat, lng);
-      const { x: px, y: py } = quadrantToImagePixel(qx, qy);
-
-      // Position in image space: seed is at (seedImageX, seedImageY)
-      const imageX = seedImageX + px;
-      const imageY = seedImageY + py;
+      // Direct lat/lng → image pixel using calibrated projection
+      const { x: imageX, y: imageY } = latlngToImagePx(lat, lng);
 
       // Bounds check
-      if (imageX < 0 || imageX > imageWidth || imageY < 0 || imageY > imageHeight) return;
+      if (imageX < 0 || imageX > IMAGE_DIMS.width || imageY < 0 || imageY > IMAGE_DIMS.height) return;
 
-      // Convert to viewport coordinates (0-1 range)
-      const vpX = imageX / imageWidth;
-      const vpY = imageY / imageHeight;
+      const vpX = imageX / IMAGE_DIMS.width;
+      const vpY = imageY / IMAGE_DIMS.height;
 
       const el = document.createElement('div');
       el.className = 'permit-marker';
@@ -262,14 +229,9 @@ export default function App() {
     const lng = parseFloat(permit.gis_longitude ?? '');
     if (isNaN(lat) || isNaN(lng)) return;
 
-    const { qx, qy } = latlngToQuadrantCoords(MAP_CONFIG, lat, lng);
-    const { x: px, y: py } = quadrantToImagePixel(qx, qy);
-
-    const seedImageX = dziDimensions.width * 0.45;
-    const seedImageY = dziDimensions.height * 0.45;
-
-    const vpX = (seedImageX + px) / dziDimensions.width;
-    const vpY = (seedImageY + py) / dziDimensions.height;
+    const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
+    const vpX = imgX / IMAGE_DIMS.width;
+    const vpY = imgY / IMAGE_DIMS.height;
 
     viewer.viewport.panTo(new OpenSeadragon.Point(vpX, vpY));
     viewer.viewport.zoomTo(viewer.viewport.getZoom() > 4 ? viewer.viewport.getZoom() : 6);
@@ -317,17 +279,6 @@ export default function App() {
       {/* Error */}
       {error && (
         <div className="error-banner">{error}</div>
-      )}
-
-      {/* Calibration hint (only in dev) */}
-      {import.meta.env.DEV && (
-        <div className="calibration-hint">
-          Tune: <a href="?sx=0.33&sy=0.35">0.33/0.35</a> |&nbsp;
-          <a href="?sx=0.30&sy=0.40">0.30/0.40</a> |&nbsp;
-          <a href="?sx=0.35&sy=0.35">0.35/0.35</a> |&nbsp;
-          <a href="?sx=0.28&sy=0.38">0.28/0.38</a> |&nbsp;
-          sx={new URLSearchParams(window.location.search).get('sx') ?? '0.33'} sy={new URLSearchParams(window.location.search).get('sy') ?? '0.35'}
-        </div>
       )}
 
       {/* Header */}
