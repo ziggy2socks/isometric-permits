@@ -26,12 +26,38 @@ const MAP_CONFIG: MapConfig = {
   tile_step: 0.5,
 };
 
-// Confirmed working DZI (123904 x 100864 px, 512px webp tiles)
-// In dev: proxied through Vite to avoid CORS. In prod: use full URL.
-const DZI_URL = import.meta.env.DEV
-  ? '/dzi/tiles.dzi'
-  : 'https://isometric-nyc-tiles.cannoneyed.com/dzi/tiles.dzi';
+// Tile server: isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files/{level}/{x}_{y}.webp
+// Custom zoom convention: level 0 = most zoomed out, level 8 = full resolution
+// Full res: 123904 x 100864 px, 512px tiles, 242x197 tiles at level 8
+// 9 zoom levels total (0..8)
+const TILE_BASE = import.meta.env.DEV
+  ? '/dzi/tiles_files'
+  : 'https://isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files';
 const DZI_DIMENSIONS = { width: 123904, height: 100864 };
+const MAX_LEVEL = 8;
+const TILE_SIZE = 512;
+
+// Custom OSD tile source — maps OSD level (high=full res) to server level (0=zoomed out, 8=full)
+function buildTileSource() {
+  const maxLevel = MAX_LEVEL; // server max
+  const osdMaxLevel = Math.ceil(Math.log2(Math.max(DZI_DIMENSIONS.width, DZI_DIMENSIONS.height)));
+
+  return {
+    width: DZI_DIMENSIONS.width,
+    height: DZI_DIMENSIONS.height,
+    tileSize: TILE_SIZE,
+    tileOverlap: 0,
+    minLevel: osdMaxLevel - maxLevel,
+    maxLevel: osdMaxLevel,
+    getTileUrl: (level: number, x: number, y: number) => {
+      // OSD level osdMaxLevel = server level 8 (full res)
+      // OSD level osdMaxLevel-1 = server level 7, etc.
+      const serverLevel = level - (osdMaxLevel - maxLevel);
+      if (serverLevel < 0 || serverLevel > maxLevel) return '';
+      return `${TILE_BASE}/${serverLevel}/${x}_${y}.webp`;
+    },
+  };
+}
 
 interface TooltipInfo {
   permit: Permit;
@@ -93,7 +119,7 @@ export default function App() {
       blendTime: 0.1,
       crossOriginPolicy: 'Anonymous',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tileSources: DZI_URL as any,
+      tileSources: buildTileSource() as any,
       gestureSettingsMouse: {
         scrollToZoom: true,
         clickToZoom: false,
