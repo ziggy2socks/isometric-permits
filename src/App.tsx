@@ -173,15 +173,20 @@ export default function App() {
     const imageWidth = dziDimensions.width;
     const imageHeight = dziDimensions.height;
 
-    // Seed point (40.7484, -73.9857) maps to quadrant (0,0) in the generation config.
-    // The full image is 123904 x 100864 px assembled from 512px quadrants.
-    // That's ~242 quadrants wide x ~197 quadrants tall.
-    // NYC's lat range ~40.49–40.92 spans ~48km north-south.
-    // The seed (Empire State Building area) is roughly central in Manhattan,
-    // which sits in the western/central portion of the full NYC map.
-    // Empirically: seed sits at roughly 40% across, 45% down the image.
-    const seedImageX = imageWidth * 0.40;
-    const seedImageY = imageHeight * 0.45;
+    // Seed point (40.7484, -73.9857) = quadrant (0,0) in generation space.
+    // We need to know where qx=0, qy=0 sits in the full assembled image.
+    // Full image: 123904 x 100864 px = 242 x 197 quadrants at 512px each.
+    //
+    // Calibration via URL params: ?sx=0.33&sy=0.35
+    // Use a known address from the ticker and adjust until it lines up.
+    const urlParams = new URLSearchParams(window.location.search);
+    const sxParam = urlParams.get('sx');
+    const syParam = urlParams.get('sy');
+    const seedFracX = sxParam ? parseFloat(sxParam) : 0.33;
+    const seedFracY = syParam ? parseFloat(syParam) : 0.35;
+
+    const seedImageX = imageWidth * seedFracX;
+    const seedImageY = imageHeight * seedFracY;
 
     let placed = 0;
     filteredPermits.forEach(permit => {
@@ -302,6 +307,17 @@ export default function App() {
       {/* Error */}
       {error && (
         <div className="error-banner">{error}</div>
+      )}
+
+      {/* Calibration hint (only in dev) */}
+      {import.meta.env.DEV && (
+        <div className="calibration-hint">
+          Tune: <a href="?sx=0.33&sy=0.35">0.33/0.35</a> |&nbsp;
+          <a href="?sx=0.30&sy=0.40">0.30/0.40</a> |&nbsp;
+          <a href="?sx=0.35&sy=0.35">0.35/0.35</a> |&nbsp;
+          <a href="?sx=0.28&sy=0.38">0.28/0.38</a> |&nbsp;
+          sx={new URLSearchParams(window.location.search).get('sx') ?? '0.33'} sy={new URLSearchParams(window.location.search).get('sy') ?? '0.35'}
+        </div>
       )}
 
       {/* Header */}
