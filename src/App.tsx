@@ -26,10 +26,12 @@ const MAP_CONFIG: MapConfig = {
   tile_step: 0.5,
 };
 
-// The DZI tiles are served from Cloudflare R2 via the isometric.nyc worker
-const DZI_URL = 'https://isometric-nyc-tiles.cannoneyed.com/dzi/image.dzi';
-// Fallback: try the snow version which we know exists based on app source
-const DZI_URL_SNOW = 'https://isometric-nyc-tiles.cannoneyed.com/dzi/snow.dzi';
+// Confirmed working DZI (123904 x 100864 px, 512px webp tiles)
+// In dev: proxied through Vite to avoid CORS. In prod: use full URL.
+const DZI_URL = import.meta.env.DEV
+  ? '/dzi/tiles.dzi'
+  : 'https://isometric-nyc-tiles.cannoneyed.com/dzi/tiles.dzi';
+const DZI_DIMENSIONS = { width: 123904, height: 100864 };
 
 interface TooltipInfo {
   permit: Permit;
@@ -69,35 +71,11 @@ export default function App() {
     );
   });
 
-  // Fetch DZI dimensions
+  // DZI dimensions are known at build time — no fetch needed
   useEffect(() => {
-    async function loadDzi() {
-      const urls = [DZI_URL, DZI_URL_SNOW];
-      for (const url of urls) {
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            const text = await res.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/xml');
-            const img = doc.querySelector('Image');
-            const size = doc.querySelector('Size');
-            if (img && size) {
-              const width = parseInt(size.getAttribute('Width') ?? '0');
-              const height = parseInt(size.getAttribute('Height') ?? '0');
-              setDziDimensions({ width, height });
-              console.log(`DZI loaded: ${width}x${height} from ${url}`);
-              return url;
-            }
-          }
-        } catch (e) {
-          console.warn(`Failed to load DZI from ${url}:`, e);
-        }
-      }
-      return null;
-    }
-    loadDzi();
+    setDziDimensions(DZI_DIMENSIONS);
   }, []);
+
 
   // Initialize OpenSeadragon
   useEffect(() => {
@@ -114,14 +92,8 @@ export default function App() {
       animationTime: 0.3,
       blendTime: 0.1,
       crossOriginPolicy: 'Anonymous',
-      tileSources: {
-        type: 'legacy-image-pyramid',
-        levels: [{
-          url: 'https://isometric-nyc-tiles.cannoneyed.com/dzi/image_files/10/0_0.jpg',
-          width: 1024,
-          height: 1024,
-        }],
-      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tileSources: DZI_URL as any,
       gestureSettingsMouse: {
         scrollToZoom: true,
         clickToZoom: false,
@@ -129,46 +101,6 @@ export default function App() {
       },
       imageSmoothingEnabled: false,
     });
-
-    // Try to load the real DZI
-    async function tryLoadDzi() {
-      const urls = [
-        'https://isometric-nyc-tiles.cannoneyed.com/dzi/image.dzi',
-        'https://isometric-nyc-tiles.cannoneyed.com/dzi/snow.dzi',
-        'https://isometric-nyc-tiles.cannoneyed.com/dzi/nyc.dzi',
-      ];
-
-      for (const url of urls) {
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            const text = await res.text();
-            if (text.includes('Image') && text.includes('Size')) {
-              console.log(`Loading DZI: ${url}`);
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              viewer.open(url as any);
-              viewer.addHandler('open', () => {
-                setDziLoaded(true);
-                const src = viewer.world.getItemAt(0)?.source;
-                if (src) {
-                  setDziDimensions({ width: src.dimensions.x, height: src.dimensions.y });
-                }
-              });
-              return;
-            }
-          }
-        } catch {
-          // try next
-        }
-      }
-
-      // If all DZI fail, just mark as loaded with fallback dims
-      console.warn('No DZI found, using fallback dimensions');
-      setDziLoaded(true);
-      setDziDimensions({ width: 32768, height: 32768 }); // estimated full NYC map
-    }
-
-    tryLoadDzi();
 
     viewer.addHandler('open', () => setDziLoaded(true));
     osdRef.current = viewer;
@@ -214,13 +146,14 @@ export default function App() {
     const imageWidth = dziDimensions.width;
     const imageHeight = dziDimensions.height;
 
-    // The seed point should map to the center-ish of the image
-    // We need to figure out the offset of the seed in image space
-    // Based on generation config: seed is at quadrant (0,0)
-    // The image is the assembled grid of all quadrants
-    // We need to find where quadrant (0,0) maps to in the full image
-    // For the full NYC map (~32k x 32k px), seed point is approximately at center
-    const seedImageX = imageWidth * 0.45; // approximate - center-ish
+    // Seed point (40.7484, -73.9857) maps to quadrant (0,0) in the generation config.
+    // The full image is 123904 x 100864 px assembled from 512px quadrants.
+    // That's ~242 quadrants wide x ~197 quadrants tall.
+    // NYC's lat range ~40.49–40.92 spans ~48km north-south.
+    // The seed (Empire State Building area) is roughly central in Manhattan,
+    // which sits in the western/central portion of the full NYC map.
+    // Empirically: seed sits at roughly 40% across, 45% down the image.
+    const seedImageX = imageWidth * 0.40;
     const seedImageY = imageHeight * 0.45;
 
     let placed = 0;

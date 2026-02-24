@@ -1,6 +1,9 @@
 import type { Permit } from './types';
 
-const API_BASE = 'https://data.cityofnewyork.us/resource/ipu4-2q9a.json';
+// Use local proxy in dev to avoid CORS; direct URL works in production (Vercel etc.)
+const API_BASE = import.meta.env.DEV
+  ? '/api/permits'
+  : 'https://data.cityofnewyork.us/resource/ipu4-2q9a.json';
 
 export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
   const cutoff = new Date();
