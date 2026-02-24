@@ -126,6 +126,7 @@ export default function App() {
         dblClickToZoom: true,
       },
       imageSmoothingEnabled: false,
+      drawer: 'canvas',
     });
 
     viewer.addHandler('open', () => setDziLoaded(true));
@@ -278,7 +279,11 @@ export default function App() {
   };
 
   const recentPermits = [...filteredPermits]
-    .sort((a, b) => new Date(b.filing_date ?? 0).getTime() - new Date(a.filing_date ?? 0).getTime())
+    .sort((a, b) => {
+      const da = a.issuance_date ?? a.filing_date ?? '';
+      const db = b.issuance_date ?? b.filing_date ?? '';
+      return new Date(db).getTime() - new Date(da).getTime();
+    })
     .slice(0, 30);
 
   return (
@@ -389,7 +394,7 @@ export default function App() {
                   {p.job_type}
                 </span>
                 <span className="ticker-address">{formatAddress(p)}</span>
-                <span className="ticker-date">{formatDate(p.filing_date)?.split(',')[0]}</span>
+                <span className="ticker-date">{formatDate(p.issuance_date ?? p.filing_date)?.split(',')[0]}</span>
               </div>
             ))}
           </div>
@@ -413,7 +418,7 @@ export default function App() {
           {tooltip.permit.owner_s_business_name && (
             <div className="tooltip-owner">{tooltip.permit.owner_s_business_name}</div>
           )}
-          <div className="tooltip-date">{formatDate(tooltip.permit.filing_date)}</div>
+          <div className="tooltip-date">{formatDate(tooltip.permit.issuance_date ?? tooltip.permit.filing_date)}</div>
         </div>
       )}
     </div>

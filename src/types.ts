@@ -19,6 +19,7 @@ export interface Permit {
   owner_s_business_name?: string;
   permittee_s_business_name?: string;
   filing_date?: string;
+  issuance_date?: string;
   gis_latitude?: string;
   gis_longitude?: string;
   job_description?: string;

@@ -8,12 +8,16 @@ const API_BASE = import.meta.env.DEV
 export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysBack);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
+  // issuance_date format in this dataset is MM/DD/YYYY
+  const month = String(cutoff.getMonth() + 1).padStart(2, '0');
+  const day = String(cutoff.getDate()).padStart(2, '0');
+  const year = cutoff.getFullYear();
+  const cutoffStr = `${month}/${day}/${year}`;
 
   const params = new URLSearchParams({
-    '$order': 'filing_date DESC',
+    '$order': 'issuance_date DESC',
     '$limit': '1000',
-    '$where': `filing_date >= '${cutoffStr}' AND gis_latitude IS NOT NULL AND gis_longitude IS NOT NULL`,
+    '$where': `issuance_date >= '${cutoffStr}' AND gis_latitude IS NOT NULL AND gis_longitude IS NOT NULL`,
   });
 
   const url = `${API_BASE}?${params}`;
