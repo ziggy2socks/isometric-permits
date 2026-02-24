@@ -42,10 +42,11 @@ export const MAP_CONFIG: MapConfig = {
 };
 
 // Seed pixel position in the assembled 123904x100864 image.
-// Calibrated from two ground-truth points (average of both derivations).
-// To recalibrate: seed_px_x = correct_img_x - qx * 512
-//                 seed_px_y = correct_img_y - qy * 512
-export const SEED_PX = { x: 44770, y: 43740 };
+// From tiles_metadata.json: originX=-87, originY=-84
+// seed_pixel = (0 - origin) * 512
+// seed_px_x = (0 - (-87)) * 512 = 87 * 512 = 44544
+// seed_px_y = (0 - (-84)) * 512 = 84 * 512 = 43008
+export const SEED_PX = { x: 87 * 512, y: 84 * 512 }; // (44544, 43008)
 
 export const IMAGE_DIMS = { width: 123904, height: 100864 };
 
