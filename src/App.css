@@ -1,0 +1,335 @@
+:root {
+  --bg: #0a0c14;
+  --panel-bg: rgba(8, 10, 20, 0.92);
+  --panel-border: rgba(0, 200, 255, 0.15);
+  --text: #e0e8ff;
+  --text-muted: #556688;
+  --accent: #00ccff;
+  --font: 'Courier New', Courier, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  overflow: hidden;
+  font-family: var(--font);
+}
+
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.viewer {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+}
+
+/* ── Header ── */
+.header {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  padding: 8px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.header-title {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+
+.header-count {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+/* ── Panels ── */
+.panel {
+  position: absolute;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(8px);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 10px;
+  letter-spacing: 2px;
+  border-bottom: 1px solid var(--panel-border);
+  user-select: none;
+}
+
+.panel-header:hover {
+  background: rgba(0, 200, 255, 0.05);
+}
+
+/* ── Filter Panel ── */
+.filter-panel {
+  top: 70px;
+  left: 16px;
+  width: 240px;
+}
+
+.panel-body {
+  padding: 10px 12px;
+}
+
+.filter-section {
+  margin-bottom: 12px;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  padding: 3px 7px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.1s;
+  letter-spacing: 0.5px;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.chip.active {
+  border-color: var(--chip-color, var(--accent));
+  color: var(--chip-color, var(--accent));
+  background: rgba(0, 200, 255, 0.06);
+  text-shadow: 0 0 8px var(--chip-color, var(--accent));
+}
+
+/* ── Ticker ── */
+.ticker-panel {
+  bottom: 16px;
+  left: 16px;
+  width: 360px;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ticker-list {
+  overflow-y: auto;
+  max-height: 230px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-border) transparent;
+}
+
+.ticker-empty {
+  padding: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 10px;
+}
+
+.ticker-row {
+  display: grid;
+  grid-template-columns: 20px 28px 1fr 60px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 200, 255, 0.04);
+  transition: background 0.1s;
+}
+
+.ticker-row:hover {
+  background: rgba(0, 200, 255, 0.05);
+}
+
+.ticker-emoji {
+  font-size: 12px;
+}
+
+.ticker-type {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.ticker-address {
+  font-size: 10px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticker-date {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* ── Permit Markers ── */
+.permit-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color, #00ccff);
+  box-shadow: 0 0 6px var(--color, #00ccff), 0 0 12px var(--color, #00ccff);
+  cursor: pointer;
+  animation: pulse 2s ease-in-out infinite;
+  transition: transform 0.1s;
+}
+
+.permit-marker:hover {
+  transform: scale(1.8);
+  z-index: 999;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 4px var(--color, #00ccff), 0 0 8px var(--color, #00ccff);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 8px var(--color, #00ccff), 0 0 20px var(--color, #00ccff);
+  }
+}
+
+/* ── Tooltip ── */
+.tooltip {
+  position: fixed;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  padding: 10px 14px;
+  pointer-events: none;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  max-width: 240px;
+}
+
+.tooltip-type {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.tooltip-address {
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.tooltip-owner {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip-date {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Loading ── */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 100;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--panel-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 3px;
+}
+
+/* ── Error ── */
+.error-banner {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 50, 50, 0.15);
+  border: 1px solid rgba(255, 50, 50, 0.4);
+  color: #ff6666;
+  padding: 8px 14px;
+  font-size: 11px;
+  max-width: 300px;
+  z-index: 50;
+}
+
+/* ── OSD Nav override ── */
+.openseadragon-navigator {
+  border: 1px solid var(--panel-border) !important;
+  background: var(--panel-bg) !important;
+}
+
+/* Collapsed panels */
+.panel.collapsed .panel-header {
+  border-bottom: none;
+}
