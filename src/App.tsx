@@ -79,6 +79,12 @@ export default function App() {
   const [dziLoaded, setDziLoaded] = useState(false);
   const [dziDimensions, setDziDimensions] = useState<{ width: number; height: number } | null>(null);
 
+
+
+  // Calibrated from 2 points: 462 First Ave + 109 Rockaway Point Blvd
+  // mpp_x=0.4293 (440m wide), mpp_y=0.2930 (300m tall), seed=(45142, 43740)
+  const [seedFrac] = useState({ x: 45142 / 123904, y: 43740 / 100864 });
+
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
     boroughs: new Set(ALL_BOROUGHS),
@@ -129,8 +135,12 @@ export default function App() {
       drawer: 'canvas',
     });
 
-    viewer.addHandler('open', () => setDziLoaded(true));
+    viewer.addHandler('open', () => {
+      setDziLoaded(true);
+      (window as any).__osd = viewer; // expose after fully open
+    });
     osdRef.current = viewer;
+    (window as any).__osd = viewer; // also expose immediately
 
     return () => {
       viewer.destroy();
@@ -182,8 +192,8 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const sxParam = urlParams.get('sx');
     const syParam = urlParams.get('sy');
-    const seedFracX = sxParam ? parseFloat(sxParam) : 0.33;
-    const seedFracY = syParam ? parseFloat(syParam) : 0.35;
+    const seedFracX = sxParam ? parseFloat(sxParam) : seedFrac.x;
+    const seedFracY = syParam ? parseFloat(syParam) : seedFrac.y;
 
     const seedImageX = imageWidth * seedFracX;
     const seedImageY = imageHeight * seedFracY;
