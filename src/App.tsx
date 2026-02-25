@@ -197,7 +197,7 @@ export default function App() {
     overlayMarkersRef.current.clear();
 
     let placed = 0;
-    filteredPermits.forEach(permit => {
+    filteredPermits.forEach((permit, idx) => {
       const lat = parseFloat(permit.gis_latitude ?? '');
       const lng = parseFloat(permit.gis_longitude ?? '');
       if (isNaN(lat) || isNaN(lng)) return;
@@ -217,6 +217,9 @@ export default function App() {
       el.className = 'permit-marker';
       el.dataset.jobType = permit.job_type ?? 'OTHER';
       el.style.setProperty('--color', getJobColor(permit.job_type ?? ''));
+      // Lock size explicitly so OSD never resizes it based on zoom/viewport
+      el.style.width = '10px';
+      el.style.height = '10px';
 
       el.addEventListener('mouseenter', (e) => {
         const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -236,7 +239,9 @@ export default function App() {
         checkResize: false,
       });
 
-      overlayMarkersRef.current.set(permit.job__ ?? Math.random().toString(), el);
+      // Use stable key — never Math.random(), which makes old overlays un-removable
+      const key = permit.job__ ? `job-${permit.job__}` : `idx-${idx}`;
+      overlayMarkersRef.current.set(key, el);
       placed++;
     });
 
