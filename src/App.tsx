@@ -96,13 +96,9 @@ export default function App() {
   const filteredPermits = permits.filter(p => {
     const jt = p.job_type?.toUpperCase() ?? 'OTHER';
     const borough = p.borough?.toUpperCase() ?? '';
-    return (
-      filters.jobTypes.has(jt) ||
-      (jt === 'OTHER' && filters.jobTypes.has('OTHER'))
-    ) && (
-      filters.boroughs.size === 0 ||
-      [...filters.boroughs].some(b => borough.includes(b))
-    );
+    const jobTypeMatch = filters.jobTypes.has(jt) || (!ALL_JOB_TYPES.includes(jt) && filters.jobTypes.has('OTHER'));
+    const boroughMatch = filters.boroughs.has(borough);
+    return jobTypeMatch && boroughMatch;
   });
 
   // DZI dimensions are known at build time — no fetch needed
