@@ -31,25 +31,26 @@ import type { MapConfig } from './types';
  *   6. Image pixel = seed_px + quadrant * 512
  */
 
-// NOTE: Production tiles use a slightly different seed than tiny-nyc repo.
-// Solved via least-squares from two calibrated ground-truth points.
-// Production seed is ~276m north, ~143m west of the tiny-nyc seed.
+// Production config solved via least-squares from 4 calibrated ground-truth points.
+// view_height_meters=363m (not 300m as in tiny-nyc) — the production render used a taller FOV.
+// X and Y use different effective heights due to camera aspect ratio.
 export const MAP_CONFIG: MapConfig = {
-  seed: { lat: 40.750880, lng: -73.987400 },
+  seed: { lat: 40.7484, lng: -73.9857 },
   camera_azimuth_degrees: -15,
   camera_elevation_degrees: -45,
   width_px: 1024,
   height_px: 1024,
-  view_height_meters: 300,
+  view_height_meters: 363,
   tile_step: 0.5,
 };
 
-// Seed pixel position in the assembled 123904x100864 image.
-// From tiles_metadata.json: originX=-87, originY=-84
-// seed_pixel = (0 - origin) * 512
-// seed_px_x = (0 - (-87)) * 512 = 87 * 512 = 44544
-// seed_px_y = (0 - (-84)) * 512 = 84 * 512 = 43008
-export const SEED_PX = { x: 87 * 512, y: 84 * 512 }; // (44544, 43008)
+// Seed pixel position, corrected by least-squares fit from 4 ground-truth points.
+// Base from tiles_metadata.json: originX=-87, originY=-84 → (44544, 43008)
+// Corrected for production view_height_meters=363m vs tiny-nyc 300m:
+// new_seed = b + a * old_seed (from linear fit)
+// x: 1356.2 + 0.9915 * 44544 = 45521
+// y: -1282.5 + 0.8255 * 43008 = 34219
+export const SEED_PX = { x: 45521, y: 34219 };
 
 export const IMAGE_DIMS = { width: 123904, height: 100864 };
 
