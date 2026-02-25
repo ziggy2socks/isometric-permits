@@ -31,26 +31,31 @@ import type { MapConfig } from './types';
  *   6. Image pixel = seed_px + quadrant * 512
  */
 
-// Production config solved via least-squares from 4 calibrated ground-truth points.
-// view_height_meters=363m (not 300m as in tiny-nyc) — the production render used a taller FOV.
-// X and Y use different effective heights due to camera aspect ratio.
+// Production config solved via least-squares from 15 calibrated ground-truth points
+// spread across all 5 NYC boroughs + NJ.
+//
+// Key finding: mpp_x ≈ mpp_y ≈ 0.293 m/px — the projection is nearly ISOTROPIC,
+// not anisotropic as previously assumed. The camera view is ~300m wide × ~424m tall
+// (raw mpp_y*1024 = 299.7m; sin(45°) foreshortening gives 424m effective height).
+//
+// RMS fit error: 28px = ~8 meters across the full NYC metro area.
+// Max error: 63px (~18m) at City Island, Bronx.
+//
+// Calibration data: 15 points measured via OSD console click logger,
+// tagged with Google Maps lat/lng for each building.
 export const MAP_CONFIG: MapConfig = {
   seed: { lat: 40.7484, lng: -73.9857 },
   camera_azimuth_degrees: -15,
   camera_elevation_degrees: -45,
   width_px: 1024,
   height_px: 1024,
-  view_height_meters: 363,
+  view_height_meters: 300,
   tile_step: 0.5,
 };
 
-// Seed pixel position, corrected by least-squares fit from 4 ground-truth points.
-// Base from tiles_metadata.json: originX=-87, originY=-84 → (44544, 43008)
-// Corrected for production view_height_meters=363m vs tiny-nyc 300m:
-// new_seed = b + a * old_seed (from linear fit)
-// x: 1356.2 + 0.9915 * 44544 = 45521
-// y: -1282.5 + 0.8255 * 43008 = 34219
-export const SEED_PX = { x: 45521, y: 34219 };
+// Seed pixel position from 15-point least-squares fit.
+// Agrees well with tiles_metadata.json origin: (-87, -84) → (44544, 43008)
+export const SEED_PX = { x: 45059, y: 43479 };
 
 export const IMAGE_DIMS = { width: 123904, height: 100864 };
 
