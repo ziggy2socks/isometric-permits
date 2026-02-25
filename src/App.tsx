@@ -208,8 +208,10 @@ export default function App() {
       // Bounds check
       if (imageX < 0 || imageX > IMAGE_DIMS.width || imageY < 0 || imageY > IMAGE_DIMS.height) return;
 
+      // OSD viewport uses image WIDTH as the unit for BOTH axes.
+      // vpX = imgX / width, vpY = imgY / width (NOT height)
       const vpX = imageX / IMAGE_DIMS.width;
-      const vpY = imageY / IMAGE_DIMS.height;
+      const vpY = imageY / IMAGE_DIMS.width;
 
       const el = document.createElement('div');
       el.className = 'permit-marker';
@@ -257,7 +259,7 @@ export default function App() {
 
     const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
     const vpX = imgX / IMAGE_DIMS.width;
-    const vpY = imgY / IMAGE_DIMS.height;
+    const vpY = imgY / IMAGE_DIMS.width; // OSD: both axes use width as unit
 
     viewer.viewport.panTo(new OpenSeadragon.Point(vpX, vpY));
     viewer.viewport.zoomTo(viewer.viewport.getZoom() > 4 ? viewer.viewport.getZoom() : 6);
