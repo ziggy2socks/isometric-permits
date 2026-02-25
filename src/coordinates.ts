@@ -31,8 +31,11 @@ import type { MapConfig } from './types';
  *   6. Image pixel = seed_px + quadrant * 512
  */
 
+// NOTE: Production tiles use a slightly different seed than tiny-nyc repo.
+// Solved via least-squares from two calibrated ground-truth points.
+// Production seed is ~276m north, ~143m west of the tiny-nyc seed.
 export const MAP_CONFIG: MapConfig = {
-  seed: { lat: 40.7484, lng: -73.9857 },
+  seed: { lat: 40.750880, lng: -73.987400 },
   camera_azimuth_degrees: -15,
   camera_elevation_degrees: -45,
   width_px: 1024,
