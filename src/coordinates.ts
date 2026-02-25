@@ -3,46 +3,41 @@ import type { MapConfig } from './types';
 /**
  * Coordinate projection for isometric-nyc.
  *
- * This is a direct port of latlng_to_quadrant_coords() from:
- *   src/isometric_nyc/generation/shared.py
+ * Ports latlng_to_quadrant_coords() from isometric-nyc/generation/shared.py,
+ * with seed pixel position calibrated from 15 ground-truth points across
+ * all 5 NYC boroughs + NJ.
  *
- * Generation config (from tiny-nyc/generation_config.json):
- *   seed: { lat: 40.7484, lng: -73.9857 }   // ~Empire State Building
- *   camera_azimuth_degrees: -15
+ * ═══ GENERATION CONFIG (from tiny-nyc/generation_config.json) ═══
+ *   seed:                    { lat: 40.7484, lng: -73.9857 }  (~Empire State Building)
+ *   camera_azimuth_degrees:  -15
  *   camera_elevation_degrees: -45
  *   width_px: 1024, height_px: 1024
  *   view_height_meters: 300
  *   tile_step: 0.5
+ *   Assembled image: 123904 × 100864 px = 242 × 197 quadrants at 512px each
  *
- * Assembled image: 123904 x 100864 px = 242 x 197 quadrants at 512px each.
+ * ═══ CALIBRATION ═══
+ *   15 points measured via OSD click logger (window.__osd), tagged with
+ *   Google Maps lat/lng. Least-squares solve for SEED_PX.
+ *   RMS residual: 28px (~8m) across full NYC metro. Max: 63px (~18m).
+ *   Projection is isotropic: mpp_x ≈ mpp_y ≈ 0.293 m/px.
  *
- * Seed pixel position calibrated from two ground-truth permit locations:
- *   A: 462 First Ave Manhattan (40.7416, -73.9742) → image px (46865, 46242)
- *   B: 109 Rockaway Point Blvd Queens (40.5608, -73.9200) → image px (45021, 95656)
- *   Average seed: (44770, 43740)
+ * ═══ CRITICAL: OSD VIEWPORT COORDINATES ═══
+ *   OpenSeadragon uses image WIDTH as the unit for BOTH axes.
+ *   To convert image pixel → OSD viewport point:
+ *     vpX = imgX / IMAGE_DIMS.width   ✓
+ *     vpY = imgY / IMAGE_DIMS.width   ✓  (divide by WIDTH, not height!)
+ *   Dividing vpY by IMAGE_DIMS.height instead gives a ~22% downward offset
+ *   because height (100864) ≠ width (123904).
  *
- * Formula derivation (from Python source):
- *   1. delta_north/east from seed in meters
- *   2. Rotate by camera azimuth → (delta_rot_x, delta_rot_y)
- *   3. delta_rot_x → shift right in camera space
- *      delta_rot_y * sin(elevation) → shift up in camera space
- *   4. Convert shifts to pixels: shift / (view_height / height_px)
- *   5. Convert pixels to quadrants: px / (width_px * tile_step) = px / 512
- *   6. Image pixel = seed_px + quadrant * 512
+ * ═══ FORMULA ═══
+ *   1. deltaNorth/East from seed in meters
+ *   2. Rotate by camera azimuth → (rotX, rotY)
+ *   3. shiftRight = rotX;  shiftUp = -rotY * sin(elevation)
+ *   4. Convert to pixels: shift / (view_height_meters / height_px)
+ *   5. Convert to quadrants: px / (width_px * tile_step)  [= px / 512]
+ *   6. Image pixel = SEED_PX + quadrant * 512
  */
-
-// Production config solved via least-squares from 15 calibrated ground-truth points
-// spread across all 5 NYC boroughs + NJ.
-//
-// Key finding: mpp_x ≈ mpp_y ≈ 0.293 m/px — the projection is nearly ISOTROPIC,
-// not anisotropic as previously assumed. The camera view is ~300m wide × ~424m tall
-// (raw mpp_y*1024 = 299.7m; sin(45°) foreshortening gives 424m effective height).
-//
-// RMS fit error: 28px = ~8 meters across the full NYC metro area.
-// Max error: 63px (~18m) at City Island, Bronx.
-//
-// Calibration data: 15 points measured via OSD console click logger,
-// tagged with Google Maps lat/lng for each building.
 export const MAP_CONFIG: MapConfig = {
   seed: { lat: 40.7484, lng: -73.9857 },
   camera_azimuth_degrees: -15,
