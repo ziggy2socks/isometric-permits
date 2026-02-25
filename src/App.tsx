@@ -56,6 +56,14 @@ interface TooltipInfo {
   y: number;
 }
 
+interface CalibPoint {
+  label: string;
+  lat: number;
+  lng: number;
+  imgX: number;
+  imgY: number;
+}
+
 export default function App() {
   const viewerRef = useRef<HTMLDivElement>(null);
   const osdRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -69,6 +77,10 @@ export default function App() {
   const [filterCollapsed, setFilterCollapsed] = useState(false);
   const [dziLoaded, setDziLoaded] = useState(false);
   const [dziDimensions, setDziDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [calibMode, setCalibMode] = useState(false);
+  const [calibPoints, setCalibPoints] = useState<CalibPoint[]>([]);
+  const [calibPending, setCalibPending] = useState<{ imgX: number; imgY: number } | null>(null);
+  const [calibInput, setCalibInput] = useState({ label: '', lat: '', lng: '' });
 
 
 
@@ -129,6 +141,20 @@ export default function App() {
       setDziLoaded(true);
       (window as any).__osd = viewer; // expose after fully open
     });
+
+    // Calibration click handler
+    viewer.addHandler('canvas-click', (event: any) => {
+      if (!(window as any).__calibMode) return;
+      event.preventDefaultAction = true;
+      const webPoint = event.position;
+      const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+      const imgCoords = viewer.viewport.viewportToImageCoordinates(viewportPoint);
+      const imgX = Math.round(imgCoords.x);
+      const imgY = Math.round(imgCoords.y);
+      console.log(`[CALIB] Clicked image coords: (${imgX}, ${imgY})`);
+      setCalibPending({ imgX, imgY });
+    });
+
     osdRef.current = viewer;
     (window as any).__osd = viewer; // also expose immediately
 
@@ -377,6 +403,106 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* Calibration Mode Toggle */}
+      {import.meta.env.DEV && (
+        <button
+          className={`calib-toggle ${calibMode ? 'active' : ''}`}
+          onClick={() => {
+            const next = !calibMode;
+            setCalibMode(next);
+            (window as any).__calibMode = next;
+            if (!next) setCalibPending(null);
+          }}
+          title="Toggle calibration mode"
+        >
+          {calibMode ? '🎯 CALIB ON' : '🎯 CALIB'}
+        </button>
+      )}
+
+      {/* Calibration point entry modal */}
+      {calibMode && calibPending && (
+        <div className="calib-modal">
+          <div className="calib-modal-title">📍 Tag this point</div>
+          <div className="calib-modal-coords">
+            Image: ({calibPending.imgX}, {calibPending.imgY})
+          </div>
+          <input
+            className="calib-input"
+            placeholder="Label (e.g. 123 Main St, Brooklyn)"
+            value={calibInput.label}
+            onChange={e => setCalibInput(p => ({ ...p, label: e.target.value }))}
+          />
+          <input
+            className="calib-input"
+            placeholder="Latitude (e.g. 40.6501)"
+            value={calibInput.lat}
+            onChange={e => setCalibInput(p => ({ ...p, lat: e.target.value }))}
+          />
+          <input
+            className="calib-input"
+            placeholder="Longitude (e.g. -73.9496)"
+            value={calibInput.lng}
+            onChange={e => setCalibInput(p => ({ ...p, lng: e.target.value }))}
+          />
+          <div className="calib-modal-buttons">
+            <button
+              className="calib-btn save"
+              onClick={() => {
+                const lat = parseFloat(calibInput.lat);
+                const lng = parseFloat(calibInput.lng);
+                if (isNaN(lat) || isNaN(lng) || !calibInput.label) return;
+                const pt: CalibPoint = {
+                  label: calibInput.label,
+                  lat,
+                  lng,
+                  imgX: calibPending.imgX,
+                  imgY: calibPending.imgY,
+                };
+                const next = [...calibPoints, pt];
+                setCalibPoints(next);
+                setCalibPending(null);
+                setCalibInput({ label: '', lat: '', lng: '' });
+                console.log('[CALIB] Points so far:', JSON.stringify(next, null, 2));
+                (window as any).__calibPoints = next;
+              }}
+            >
+              Save
+            </button>
+            <button
+              className="calib-btn cancel"
+              onClick={() => { setCalibPending(null); setCalibInput({ label: '', lat: '', lng: '' }); }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Calibration points list */}
+      {calibMode && calibPoints.length > 0 && (
+        <div className="calib-list">
+          <div className="calib-list-title">CALIBRATION POINTS ({calibPoints.length})</div>
+          {calibPoints.map((pt, i) => (
+            <div key={i} className="calib-list-row">
+              <span className="calib-list-label">{pt.label}</span>
+              <span className="calib-list-coords">
+                ({pt.lat.toFixed(4)}, {pt.lng.toFixed(4)}) → img ({pt.imgX}, {pt.imgY})
+              </span>
+            </div>
+          ))}
+          <button
+            className="calib-btn copy"
+            onClick={() => {
+              const text = JSON.stringify(calibPoints, null, 2);
+              navigator.clipboard.writeText(text);
+              console.log('[CALIB] Copied to clipboard:', text);
+            }}
+          >
+            📋 Copy JSON
+          </button>
+        </div>
+      )}
 
       {/* Tooltip */}
       {tooltip && (
