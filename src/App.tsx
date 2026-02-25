@@ -15,7 +15,7 @@ import {
 import './App.css';
 
 // Tile server: isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files/{level}/{x}_{y}.webp
-// Custom zoom convention: level 0 = most zoomed out, level 8 = full resolution
+// Custom zoom: level 0 = zoomed out, level 8 = full resolution
 const TILE_BASE = import.meta.env.DEV
   ? '/dzi/tiles_files'
   : 'https://isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files';
@@ -40,12 +40,11 @@ function buildTileSource() {
   };
 }
 
-// Borough abbreviations for display
 const BOROUGH_ABBR: Record<string, string> = {
   'MANHATTAN': 'MAN',
   'BROOKLYN': 'BKN',
-  'QUEENS': 'QNS',
-  'BRONX': 'BRX',
+  'QUEENS':   'QNS',
+  'BRONX':    'BRX',
   'STATEN ISLAND': 'SI',
 };
 
@@ -53,14 +52,6 @@ interface TooltipInfo {
   permit: Permit;
   x: number;
   y: number;
-}
-
-interface CalibPoint {
-  label: string;
-  lat: number;
-  lng: number;
-  imgX: number;
-  imgY: number;
 }
 
 export default function App() {
@@ -73,18 +64,13 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipInfo | null>(null);
   const [dziLoaded, setDziLoaded] = useState(false);
-  const [dziDimensions, setDziDimensions] = useState<{ width: number; height: number } | null>(null);
 
-  // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Whether permit overlay is active
+  const [overlayOn, setOverlayOn] = useState(true);
+
+  // Section collapse state
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [tickerOpen, setTickerOpen] = useState(true);
-
-  // Calibration (dev only)
-  const [calibMode, setCalibMode] = useState(false);
-  const [calibPoints, setCalibPoints] = useState<CalibPoint[]>([]);
-  const [calibPending, setCalibPending] = useState<{ imgX: number; imgY: number } | null>(null);
-  const [calibInput, setCalibInput] = useState({ label: '', lat: '', lng: '' });
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
@@ -99,8 +85,6 @@ export default function App() {
     const boroughMatch = filters.boroughs.has(borough);
     return jobTypeMatch && boroughMatch;
   });
-
-  useEffect(() => { setDziDimensions(DZI_DIMENSIONS); }, []);
 
   // Initialize OpenSeadragon
   useEffect(() => {
@@ -129,18 +113,6 @@ export default function App() {
       (window as any).__osd = viewer;
     });
 
-    viewer.addHandler('canvas-click', (event: any) => {
-      if (!(window as any).__calibMode) return;
-      event.preventDefaultAction = true;
-      const imgCoords = viewer.viewport.viewportToImageCoordinates(
-        viewer.viewport.pointFromPixel(event.position)
-      );
-      const imgX = Math.round(imgCoords.x);
-      const imgY = Math.round(imgCoords.y);
-      console.log(`[CALIB] Clicked image coords: (${imgX}, ${imgY})`);
-      setCalibPending({ imgX, imgY });
-    });
-
     osdRef.current = viewer;
     (window as any).__osd = viewer;
 
@@ -156,7 +128,7 @@ export default function App() {
         const data = await fetchPermits(filters.daysBack);
         setPermits(data);
       } catch (e) {
-        setError('Failed to load permit data. Try refreshing.');
+        setError('Failed to load permit data.');
         console.error(e);
       } finally {
         setLoading(false);
@@ -167,13 +139,15 @@ export default function App() {
     return () => clearInterval(interval);
   }, [filters.daysBack]);
 
-  // Place permit markers
+  // Place / clear markers based on overlayOn + filters
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
-    if (!viewer || !dziDimensions) return;
+    if (!viewer) return;
 
     viewer.clearOverlays();
     overlayMarkersRef.current.clear();
+
+    if (!overlayOn) return;
 
     let placed = 0;
     filteredPermits.forEach((permit, idx) => {
@@ -213,7 +187,7 @@ export default function App() {
     });
 
     console.log(`Placed ${placed} markers`);
-  }, [filteredPermits, dziDimensions]);
+  }, [filteredPermits, overlayOn]);
 
   useEffect(() => {
     if (dziLoaded) placeMarkers();
@@ -221,14 +195,14 @@ export default function App() {
 
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;
-    if (!viewer || !dziDimensions) return;
+    if (!viewer) return;
     const lat = parseFloat(permit.gis_latitude ?? '');
     const lng = parseFloat(permit.gis_longitude ?? '');
     if (isNaN(lat) || isNaN(lng)) return;
     const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
     viewer.viewport.panTo(new OpenSeadragon.Point(imgX / IMAGE_DIMS.width, imgY / IMAGE_DIMS.width));
     viewer.viewport.zoomTo(viewer.viewport.getZoom() > 4 ? viewer.viewport.getZoom() : 6);
-  }, [dziDimensions]);
+  }, []);
 
   const toggleJobType = (jt: string) => setFilters(prev => {
     const next = new Set(prev.jobTypes);
@@ -243,8 +217,10 @@ export default function App() {
   });
 
   const recentPermits = [...filteredPermits]
-    .sort((a, b) => new Date(b.issuance_date ?? b.filing_date ?? '').getTime()
-                  - new Date(a.issuance_date ?? a.filing_date ?? '').getTime())
+    .sort((a, b) =>
+      new Date(b.issuance_date ?? b.filing_date ?? '').getTime() -
+      new Date(a.issuance_date ?? a.filing_date ?? '').getTime()
+    )
     .slice(0, 30);
 
   return (
@@ -252,7 +228,7 @@ export default function App() {
       {/* Map */}
       <div ref={viewerRef} className="viewer" />
 
-      {/* Loading overlay */}
+      {/* Loading */}
       {loading && !dziLoaded && (
         <div className="loading-overlay">
           <div className="loading-spinner" />
@@ -260,31 +236,31 @@ export default function App() {
         </div>
       )}
 
-      {/* Error */}
       {error && <div className="error-banner">{error}</div>}
 
-      {/* Sidebar toggle tab — always visible */}
-      <button
-        className={`sidebar-tab ${sidebarOpen ? 'open' : ''}`}
-        onClick={() => setSidebarOpen(v => !v)}
-        title={sidebarOpen ? 'Hide Permit Pulse' : 'Show Permit Pulse'}
-      >
-        {sidebarOpen ? '◀' : '▶'}
-      </button>
-
       {/* ── Sidebar ── */}
-      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <div className="sidebar">
 
-        {/* Sidebar header */}
+        {/* Header */}
         <div className="sidebar-header">
-          <span className="sidebar-title">NYC PERMIT PULSE</span>
-          <span className="sidebar-count">
-            {loading ? '…' : `${filteredPermits.length}`}
-            <span className="sidebar-count-label"> permits</span>
-          </span>
+          <div className="sidebar-title-row">
+            <span className="sidebar-title">NYC PERMIT PULSE</span>
+            {/* On/off toggle */}
+            <button
+              className={`overlay-toggle ${overlayOn ? 'on' : 'off'}`}
+              onClick={() => setOverlayOn(v => !v)}
+              title={overlayOn ? 'Hide permit markers' : 'Show permit markers'}
+            >
+              {overlayOn ? 'ON' : 'OFF'}
+            </button>
+          </div>
+          <div className="sidebar-meta">
+            {loading ? '…' : `${filteredPermits.length} permits`}
+            {!dziLoaded && ' · loading map'}
+          </div>
         </div>
 
-        {/* Filters section */}
+        {/* Filters */}
         <div className="sidebar-section">
           <button className="section-toggle" onClick={() => setFiltersOpen(v => !v)}>
             <span>FILTERS</span>
@@ -342,7 +318,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Ticker section */}
+        {/* Live Ticker */}
         <div className="sidebar-section sidebar-section--grow">
           <button className="section-toggle" onClick={() => setTickerOpen(v => !v)}>
             <span>LIVE TICKER</span>
@@ -373,71 +349,17 @@ export default function App() {
           )}
         </div>
 
-        {/* Sidebar footer */}
         <div className="sidebar-footer">
           permit-pulse · isometric.nyc overlay
         </div>
       </div>
 
-      {/* Dev: Calibration */}
-      {import.meta.env.DEV && (
-        <button
-          className={`calib-toggle ${calibMode ? 'active' : ''}`}
-          onClick={() => {
-            const next = !calibMode;
-            setCalibMode(next);
-            (window as any).__calibMode = next;
-            if (!next) setCalibPending(null);
-          }}
-        >
-          {calibMode ? '🎯 CALIB ON' : '🎯 CALIB'}
-        </button>
-      )}
-
-      {calibMode && calibPending && (
-        <div className="calib-modal">
-          <div className="calib-modal-title">📍 Tag this point</div>
-          <div className="calib-modal-coords">Image: ({calibPending.imgX}, {calibPending.imgY})</div>
-          <input className="calib-input" placeholder="Label (e.g. 123 Main St, Brooklyn)"
-            value={calibInput.label} onChange={e => setCalibInput(p => ({ ...p, label: e.target.value }))} />
-          <input className="calib-input" placeholder="Latitude"
-            value={calibInput.lat} onChange={e => setCalibInput(p => ({ ...p, lat: e.target.value }))} />
-          <input className="calib-input" placeholder="Longitude"
-            value={calibInput.lng} onChange={e => setCalibInput(p => ({ ...p, lng: e.target.value }))} />
-          <div className="calib-modal-buttons">
-            <button className="calib-btn save" onClick={() => {
-              const lat = parseFloat(calibInput.lat);
-              const lng = parseFloat(calibInput.lng);
-              if (isNaN(lat) || isNaN(lng) || !calibInput.label) return;
-              const next = [...calibPoints, { label: calibInput.label, lat, lng, imgX: calibPending.imgX, imgY: calibPending.imgY }];
-              setCalibPoints(next);
-              setCalibPending(null);
-              setCalibInput({ label: '', lat: '', lng: '' });
-              (window as any).__calibPoints = next;
-            }}>Save</button>
-            <button className="calib-btn cancel" onClick={() => { setCalibPending(null); setCalibInput({ label: '', lat: '', lng: '' }); }}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {calibMode && calibPoints.length > 0 && (
-        <div className="calib-list">
-          <div className="calib-list-title">CALIBRATION POINTS ({calibPoints.length})</div>
-          {calibPoints.map((pt, i) => (
-            <div key={i} className="calib-list-row">
-              <span className="calib-list-label">{pt.label}</span>
-              <span className="calib-list-coords">({pt.lat.toFixed(4)}, {pt.lng.toFixed(4)}) → img ({pt.imgX}, {pt.imgY})</span>
-            </div>
-          ))}
-          <button className="calib-btn copy" onClick={() => {
-            navigator.clipboard.writeText(JSON.stringify(calibPoints, null, 2));
-          }}>📋 Copy JSON</button>
-        </div>
-      )}
-
       {/* Tooltip */}
       {tooltip && (
-        <div className="tooltip" style={{ left: tooltip.x, top: tooltip.y - 8, transform: 'translate(-50%, -100%)' }}>
+        <div
+          className="tooltip"
+          style={{ left: tooltip.x, top: tooltip.y - 8, transform: 'translate(-50%, -100%)' }}
+        >
           <div className="tooltip-type" style={{ color: getJobColor(tooltip.permit.job_type ?? '') }}>
             {getJobEmoji(tooltip.permit.job_type ?? '')} {getJobLabel(tooltip.permit.job_type ?? '')}
           </div>
@@ -445,7 +367,9 @@ export default function App() {
           {tooltip.permit.owner_s_business_name && (
             <div className="tooltip-owner">{tooltip.permit.owner_s_business_name}</div>
           )}
-          <div className="tooltip-date">{formatDate(tooltip.permit.issuance_date ?? tooltip.permit.filing_date)}</div>
+          <div className="tooltip-date">
+            {formatDate(tooltip.permit.issuance_date ?? tooltip.permit.filing_date)}
+          </div>
         </div>
       )}
     </div>

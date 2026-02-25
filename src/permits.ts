@@ -92,5 +92,7 @@ export function formatDate(dateStr?: string): string {
   }
 }
 
-export const ALL_JOB_TYPES = ['NB', 'DM', 'A1', 'A2', 'A3', 'EW', 'PL', 'SG'];
+// PL and EW don't exist in this DOB endpoint; SG data is pre-2011 only.
+// Keeping the label/color/emoji maps for completeness but not showing in filters.
+export const ALL_JOB_TYPES = ['NB', 'DM', 'A1', 'A2', 'A3'];
 export const ALL_BOROUGHS = ['MANHATTAN', 'BROOKLYN', 'QUEENS', 'BRONX', 'STATEN ISLAND'];

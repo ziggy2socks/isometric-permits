@@ -46,72 +46,57 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transform: translateX(calc(-1 * var(--sidebar-w)));
-  transition: transform 0.22s ease;
-  pointer-events: none;
-}
-
-.sidebar.open {
-  transform: translateX(0);
-  pointer-events: all;
 }
 
 /* ── Sidebar header ── */
 .sidebar-header {
-  padding: 16px 14px 12px;
+  padding: 14px 14px 10px;
   border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-title-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  flex-shrink: 0;
+  align-items: center;
 }
 
 .sidebar-title {
   color: var(--accent);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
   letter-spacing: 3px;
 }
 
-.sidebar-count {
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: bold;
-}
-
-.sidebar-count-label {
+.sidebar-meta {
   color: var(--text-muted);
   font-size: 9px;
   letter-spacing: 1px;
 }
 
-/* ── Sidebar toggle tab ── */
-.sidebar-tab {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  z-index: 101;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-left: none;
-  color: var(--accent);
-  font: 11px var(--font);
-  padding: 10px 6px;
+/* ── Overlay on/off toggle ── */
+.overlay-toggle {
+  font: bold 10px var(--font);
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border: 1px solid;
   cursor: pointer;
-  letter-spacing: 0;
-  line-height: 1;
-  transition: left 0.22s ease, background 0.1s;
-  pointer-events: all;
-  backdrop-filter: blur(10px);
+  transition: all 0.15s;
 }
 
-.sidebar-tab.open {
-  left: var(--sidebar-w);
+.overlay-toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0, 200, 255, 0.08);
 }
 
-.sidebar-tab:hover {
-  background: rgba(0, 200, 255, 0.1);
+.overlay-toggle.off {
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+  background: transparent;
 }
 
 /* ── Sidebar sections ── */
@@ -381,79 +366,3 @@ html, body, #root {
   background: var(--panel-bg) !important;
 }
 
-/* ── Calibration (dev only) ── */
-.calib-toggle {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 300;
-  background: var(--panel-bg);
-  border: 1px solid rgba(0, 200, 255, 0.2);
-  color: var(--text-muted);
-  font: 11px var(--font);
-  padding: 5px 10px;
-  cursor: pointer;
-  letter-spacing: 0.05em;
-}
-.calib-toggle.active { border-color: #ff0; color: #ff0; }
-
-.calib-modal {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 500;
-  background: rgba(8, 10, 20, 0.97);
-  border: 1px solid rgba(0, 200, 255, 0.4);
-  padding: 16px;
-  min-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.calib-modal-title { font: bold 13px var(--font); color: #ff0; letter-spacing: 0.1em; }
-.calib-modal-coords { font: 11px var(--font); color: var(--text-muted); }
-.calib-input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(0, 200, 255, 0.2);
-  color: var(--text);
-  font: 12px var(--font);
-  padding: 6px 8px;
-  outline: none;
-  width: 100%;
-}
-.calib-input:focus { border-color: var(--accent); }
-.calib-modal-buttons { display: flex; gap: 8px; margin-top: 4px; }
-.calib-btn {
-  flex: 1;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(0, 200, 255, 0.2);
-  color: var(--text);
-  font: 12px var(--font);
-  padding: 6px;
-  cursor: pointer;
-  letter-spacing: 0.05em;
-}
-.calib-btn.save { border-color: #0f0; color: #0f0; }
-.calib-btn.cancel { border-color: #f44; color: #f44; }
-.calib-btn.copy { flex: unset; width: 100%; margin-top: 4px; border-color: #ff0; color: #ff0; }
-.calib-btn:hover { opacity: 0.8; }
-
-.calib-list {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 400;
-  background: rgba(8, 10, 20, 0.95);
-  border: 1px solid rgba(255, 255, 0, 0.3);
-  padding: 10px 14px;
-  min-width: 480px;
-  max-width: 700px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.calib-list-title { font: bold 11px var(--font); color: #ff0; letter-spacing: 0.1em; margin-bottom: 4px; }
-.calib-list-row { font: 11px var(--font); color: var(--text); display: flex; gap: 12px; }
-.calib-list-label { color: var(--accent); min-width: 180px; }
-.calib-list-coords { color: var(--text-muted); }
