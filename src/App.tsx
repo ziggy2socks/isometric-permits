@@ -186,10 +186,8 @@ export default function App() {
     const viewer = osdRef.current;
     if (!viewer || !dziDimensions) return;
 
-    // Remove old markers
-    overlayMarkersRef.current.forEach((el, _id) => {
-      viewer.removeOverlay(el);
-    });
+    // Remove ALL overlays (not just tracked ones — stale calib overlays etc. can persist)
+    viewer.clearOverlays();
     overlayMarkersRef.current.clear();
 
     let placed = 0;
