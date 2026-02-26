@@ -314,6 +314,8 @@ export default function App() {
       el.style.height = '10px';
       el.style.opacity = String(opacity);
 
+      el.style.pointerEvents = 'auto';
+
       el.addEventListener('mouseenter', (e) => {
         const rect = (e.target as HTMLElement).getBoundingClientRect();
         setTooltip({ permit, x: rect.left + rect.width / 2, y: rect.top });
@@ -323,9 +325,16 @@ export default function App() {
         setTooltip(null);
         el.style.opacity = String(opacity);
       });
+      // Use pointerdown + stopImmediatePropagation so OSD's MouseTracker
+      // doesn't intercept the event before our click fires.
+      el.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      });
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        setDrawerPermit(permit); // open drawer, don't move the map
+        e.stopImmediatePropagation();
+        setDrawerPermit(permit);
       });
 
       viewer.addOverlay({
