@@ -273,6 +273,67 @@ html, body, #root {
   margin-top: auto;
 }
 
+/* ── Permit breakdown chart ── */
+.chart {
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+
+.chart-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 32px;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-align: right;
+}
+
+.chart-track {
+  height: 6px;
+  background: rgba(255,255,255,0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-bar {
+  height: 100%;
+  transition: width 0.4s ease;
+  image-rendering: pixelated;
+}
+
+.chart-count {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.chart-total {
+  margin-top: 8px;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-align: right;
+}
+
 /* ── Sidebar footer ── */
 .sidebar-footer {
   padding: 8px 14px;

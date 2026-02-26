@@ -54,6 +54,50 @@ interface TooltipInfo {
   y: number;
 }
 
+// ── Permit breakdown chart ──
+function PermitChart({ permits }: { permits: Permit[] }) {
+  const counts = new Map<string, number>();
+  for (const p of permits) {
+    const jt = p.job_type ?? 'OTH';
+    counts.set(jt, (counts.get(jt) ?? 0) + 1);
+  }
+
+  // Sort by count descending, take top 8
+  const bars = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  if (bars.length === 0) return null;
+
+  const max = bars[0][1];
+  const total = permits.length;
+
+  return (
+    <div className="chart">
+      <div className="chart-title">BREAKDOWN</div>
+      <div className="chart-bars">
+        {bars.map(([jt, count]) => (
+          <div key={jt} className="chart-row" title={`${getJobLabel(jt)}: ${count}`}>
+            <span className="chart-label">{jt}</span>
+            <div className="chart-track">
+              <div
+                className="chart-bar"
+                style={{
+                  width: `${(count / max) * 100}%`,
+                  background: getJobColor(jt),
+                  boxShadow: `0 0 6px ${getJobColor(jt)}`,
+                }}
+              />
+            </div>
+            <span className="chart-count">{count}</span>
+          </div>
+        ))}
+      </div>
+      <div className="chart-total">{total.toLocaleString()} total</div>
+    </div>
+  );
+}
+
 export default function App() {
   const viewerRef = useRef<HTMLDivElement>(null);
   const osdRef = useRef<OpenSeadragon.Viewer | null>(null);
@@ -396,6 +440,9 @@ export default function App() {
             </div>
           )}
         </div>
+
+        {/* ── Permit breakdown chart ── */}
+        <PermitChart permits={filteredPermits} />
 
         <div className="sidebar-footer">
           permit-pulse · isometric.nyc overlay
