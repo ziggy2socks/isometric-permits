@@ -29,6 +29,8 @@ export interface Permit {
   permit_status?: string;
   job_description?: string;
   filing_reason?: string;
+  work_on_floor?: string;
+  estimated_job_costs?: string;
 
   // Dates (ISO format: 2026-02-24T00:00:00.000)
   issued_date?: string;

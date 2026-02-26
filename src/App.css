@@ -461,3 +461,135 @@ html, body, #root {
   background: var(--panel-bg) !important;
 }
 
+
+/* ── Permit Detail Drawer ── */
+.drawer {
+  position: absolute;
+  top: 0;
+  left: 260px; /* sidebar width */
+  width: 280px;
+  height: 100%;
+  background: rgba(6, 8, 18, 0.97);
+  border-right: 1px solid var(--drawer-color, var(--panel-border));
+  backdrop-filter: blur(12px);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-border) transparent;
+  animation: drawer-in 0.18s ease;
+}
+
+@keyframes drawer-in {
+  from { transform: translateX(-12px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px 14px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+
+.drawer-type {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+}
+
+.drawer-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.drawer-close:hover { color: var(--text); }
+
+.drawer-address {
+  padding: 10px 14px 2px;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.drawer-borough {
+  padding: 0 14px 10px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+}
+
+.drawer-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+  margin: 6px 0;
+  flex-shrink: 0;
+}
+
+.drawer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0 14px;
+  gap: 10px 8px;
+}
+
+.drawer-field {
+  padding: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drawer-grid .drawer-field {
+  padding: 0;
+}
+
+.drawer-field-label {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+}
+
+.drawer-field-value {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.drawer-description {
+  font-size: 10px;
+  color: var(--text);
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.drawer-cost {
+  color: #00ff88;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.drawer-filing {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* tooltip hint */
+.tooltip-hint {
+  font-size: 8px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-top: 4px;
+  opacity: 0.7;
+}

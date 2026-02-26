@@ -14,8 +14,6 @@ import {
 } from './permits';
 import './App.css';
 
-// Tile server: isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files/{level}/{x}_{y}.webp
-// Custom zoom: level 0 = zoomed out, level 8 = full resolution
 const TILE_BASE = import.meta.env.DEV
   ? '/dzi/tiles_files'
   : 'https://isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files';
@@ -41,37 +39,17 @@ function buildTileSource() {
 }
 
 const BOROUGH_ABBR: Record<string, string> = {
-  'MANHATTAN': 'MAN',
-  'BROOKLYN': 'BKN',
-  'QUEENS':   'QNS',
-  'BRONX':    'BRX',
-  'STATEN ISLAND': 'SI',
+  'MANHATTAN': 'MAN', 'BROOKLYN': 'BKN', 'QUEENS': 'QNS',
+  'BRONX': 'BRX', 'STATEN ISLAND': 'SI',
 };
-
-interface TooltipInfo {
-  permit: Permit;
-  x: number;
-  y: number;
-}
 
 // ── Permit breakdown chart ──
 function PermitChart({ permits }: { permits: Permit[] }) {
   const counts = new Map<string, number>();
-  for (const p of permits) {
-    const jt = p.job_type ?? 'OTH';
-    counts.set(jt, (counts.get(jt) ?? 0) + 1);
-  }
-
-  // Sort by count descending, take top 8
-  const bars = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-
+  for (const p of permits) counts.set(p.job_type ?? 'OTH', (counts.get(p.job_type ?? 'OTH') ?? 0) + 1);
+  const bars = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (bars.length === 0) return null;
-
   const max = bars[0][1];
-  const total = permits.length;
-
   return (
     <div className="chart">
       <div className="chart-title">BREAKDOWN</div>
@@ -80,22 +58,130 @@ function PermitChart({ permits }: { permits: Permit[] }) {
           <div key={jt} className="chart-row" title={`${getJobLabel(jt)}: ${count}`}>
             <span className="chart-label">{jt}</span>
             <div className="chart-track">
-              <div
-                className="chart-bar"
-                style={{
-                  width: `${(count / max) * 100}%`,
-                  background: getJobColor(jt),
-                  boxShadow: `0 0 6px ${getJobColor(jt)}`,
-                }}
-              />
+              <div className="chart-bar" style={{
+                width: `${(count / max) * 100}%`,
+                background: getJobColor(jt),
+                boxShadow: `0 0 6px ${getJobColor(jt)}`,
+              }} />
             </div>
             <span className="chart-count">{count}</span>
           </div>
         ))}
       </div>
-      <div className="chart-total">{total.toLocaleString()} total</div>
+      <div className="chart-total">{permits.length.toLocaleString()} total</div>
     </div>
   );
+}
+
+// ── Permit detail drawer ──
+function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void }) {
+  const color = getJobColor(permit.job_type ?? '');
+  const cost = permit.estimated_job_costs
+    ? `$${Number(permit.estimated_job_costs).toLocaleString()}`
+    : null;
+
+  return (
+    <div className="drawer" style={{ '--drawer-color': color } as React.CSSProperties}>
+      <div className="drawer-header">
+        <div className="drawer-type" style={{ color }}>
+          {getJobEmoji(permit.job_type ?? '')} {getJobLabel(permit.job_type ?? '')}
+        </div>
+        <button className="drawer-close" onClick={onClose}>✕</button>
+      </div>
+
+      <div className="drawer-address">{formatAddress(permit)}</div>
+      {permit.borough && <div className="drawer-borough">{permit.borough}</div>}
+
+      <div className="drawer-divider" />
+
+      {permit.job_description && (
+        <div className="drawer-field">
+          <div className="drawer-field-label">DESCRIPTION</div>
+          <div className="drawer-field-value drawer-description">{permit.job_description}</div>
+        </div>
+      )}
+
+      <div className="drawer-grid">
+        {permit.issued_date && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">ISSUED</div>
+            <div className="drawer-field-value">{formatDate(permit.issued_date)}</div>
+          </div>
+        )}
+        {permit.expired_date && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">EXPIRES</div>
+            <div className="drawer-field-value">{formatDate(permit.expired_date)}</div>
+          </div>
+        )}
+        {cost && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">EST. COST</div>
+            <div className="drawer-field-value drawer-cost">{cost}</div>
+          </div>
+        )}
+        {permit.permit_status && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">STATUS</div>
+            <div className="drawer-field-value">{permit.permit_status}</div>
+          </div>
+        )}
+        {permit.work_on_floor && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">FLOOR(S)</div>
+            <div className="drawer-field-value">{permit.work_on_floor}</div>
+          </div>
+        )}
+        {permit.filing_reason && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">FILING</div>
+            <div className="drawer-field-value">{permit.filing_reason}</div>
+          </div>
+        )}
+      </div>
+
+      {(permit.owner_business_name || permit.owner_name) && (
+        <>
+          <div className="drawer-divider" />
+          <div className="drawer-field">
+            <div className="drawer-field-label">OWNER</div>
+            <div className="drawer-field-value">{permit.owner_business_name || permit.owner_name}</div>
+          </div>
+        </>
+      )}
+
+      {permit.applicant_business_name && (
+        <div className="drawer-field">
+          <div className="drawer-field-label">CONTRACTOR</div>
+          <div className="drawer-field-value">{permit.applicant_business_name}</div>
+        </div>
+      )}
+
+      {permit.job_filing_number && (
+        <>
+          <div className="drawer-divider" />
+          <div className="drawer-field">
+            <div className="drawer-field-label">FILING #</div>
+            <div className="drawer-field-value drawer-filing">{permit.job_filing_number}</div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Compute recency opacity: newest = 1.0, oldest = 0.25
+function getRecencyOpacity(permit: Permit, permits: Permit[]): number {
+  const dateStr = permit.issued_date ?? permit.approved_date;
+  if (!dateStr || permits.length <= 1) return 1;
+  const t = new Date(dateStr).getTime();
+  const times = permits
+    .map(p => new Date(p.issued_date ?? p.approved_date ?? '').getTime())
+    .filter(n => !isNaN(n));
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  if (max === min) return 1;
+  return 0.25 + 0.75 * ((t - min) / (max - min));
 }
 
 export default function App() {
@@ -106,13 +192,10 @@ export default function App() {
   const [permits, setPermits] = useState<Permit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<TooltipInfo | null>(null);
+  const [tooltip, setTooltip] = useState<{ permit: Permit; x: number; y: number } | null>(null);
+  const [drawerPermit, setDrawerPermit] = useState<Permit | null>(null);
   const [dziLoaded, setDziLoaded] = useState(false);
-
-  // Whether permit overlay is active
   const [overlayOn, setOverlayOn] = useState(true);
-
-  // Section collapse state
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [tickerOpen, setTickerOpen] = useState(true);
 
@@ -133,7 +216,6 @@ export default function App() {
   // Initialize OpenSeadragon
   useEffect(() => {
     if (!viewerRef.current || osdRef.current) return;
-
     const viewer = OpenSeadragon({
       element: viewerRef.current,
       prefixUrl: '',
@@ -151,19 +233,13 @@ export default function App() {
       imageSmoothingEnabled: false,
       drawer: 'canvas',
     });
-
-    viewer.addHandler('open', () => {
-      setDziLoaded(true);
-      (window as any).__osd = viewer;
-    });
-
+    viewer.addHandler('open', () => { setDziLoaded(true); (window as any).__osd = viewer; });
     osdRef.current = viewer;
     (window as any).__osd = viewer;
-
     return () => { viewer.destroy(); osdRef.current = null; };
   }, []);
 
-  // Fetch permits — clear immediately on daysBack change so stale data doesn't linger
+  // Fetch permits
   useEffect(() => {
     setPermits([]);
     async function load() {
@@ -185,14 +261,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, [filters.daysBack]);
 
-  // Place / clear markers based on overlayOn + filters
+  // Place markers with recency fade
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
     if (!viewer) return;
-
     viewer.clearOverlays();
     overlayMarkersRef.current.clear();
-
     if (!overlayOn) return;
 
     let placed = 0;
@@ -204,21 +278,32 @@ export default function App() {
       const { x: imageX, y: imageY } = latlngToImagePx(lat, lng);
       if (imageX < 0 || imageX > IMAGE_DIMS.width || imageY < 0 || imageY > IMAGE_DIMS.height) return;
 
-      // OSD viewport: both axes use image WIDTH as the unit
       const vpX = imageX / IMAGE_DIMS.width;
       const vpY = imageY / IMAGE_DIMS.width;
+
+      // Recency fade: newer = brighter, older = dimmer
+      const opacity = getRecencyOpacity(permit, filteredPermits);
 
       const el = document.createElement('div');
       el.className = 'permit-marker';
       el.style.setProperty('--color', getJobColor(permit.job_type ?? ''));
       el.style.width = '10px';
       el.style.height = '10px';
+      el.style.opacity = String(opacity);
 
       el.addEventListener('mouseenter', (e) => {
         const rect = (e.target as HTMLElement).getBoundingClientRect();
         setTooltip({ permit, x: rect.left + rect.width / 2, y: rect.top });
+        el.style.opacity = '1'; // full brightness on hover
       });
-      el.addEventListener('mouseleave', () => setTooltip(null));
+      el.addEventListener('mouseleave', () => {
+        setTooltip(null);
+        el.style.opacity = String(opacity);
+      });
+      el.addEventListener('click', () => {
+        setDrawerPermit(permit);
+        flyToPermit(permit);
+      });
 
       viewer.addOverlay({
         element: el,
@@ -231,13 +316,10 @@ export default function App() {
       overlayMarkersRef.current.set(key, el);
       placed++;
     });
-
     console.log(`Placed ${placed} markers`);
   }, [filteredPermits, overlayOn]);
 
-  useEffect(() => {
-    if (dziLoaded) placeMarkers();
-  }, [dziLoaded, placeMarkers]);
+  useEffect(() => { if (dziLoaded) placeMarkers(); }, [dziLoaded, placeMarkers]);
 
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;
@@ -262,14 +344,12 @@ export default function App() {
     return { ...prev, boroughs: next };
   });
 
-  // All filtered permits sorted newest-first — ticker cycles through all of them
-  const sortedPermits = [...filteredPermits]
-    .sort((a, b) =>
-      new Date(b.issued_date ?? b.approved_date ?? '').getTime() -
-      new Date(a.issued_date ?? a.approved_date ?? '').getTime()
-    );
+  const sortedPermits = [...filteredPermits].sort((a, b) =>
+    new Date(b.issued_date ?? b.approved_date ?? '').getTime() -
+    new Date(a.issued_date ?? a.approved_date ?? '').getTime()
+  );
 
-  // Auto-scrolling ticker state
+  // Ticker
   const tickerRef = useRef<HTMLDivElement>(null);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [tickerFlash, setTickerFlash] = useState<number | null>(null);
@@ -283,20 +363,12 @@ export default function App() {
         const next = (i + 1) % sortedPermits.length;
         setTickerFlash(next);
         setTimeout(() => setTickerFlash(null), 600);
-        // Scroll the ticker container
-        const el = tickerRef.current;
-        if (el) {
-          const rows = el.querySelectorAll('.ticker-row');
-          const row = rows[next % rows.length] as HTMLElement;
-          if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
         return next;
       });
     }, 2200);
     return () => clearInterval(interval);
   }, [tickerOpen, sortedPermits.length]);
 
-  // Visible window: show 8 rows centered around current index
   const TICKER_WINDOW = 8;
   const tickerPermits = sortedPermits.length === 0 ? [] : (() => {
     const result = [];
@@ -308,10 +380,8 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Map */}
       <div ref={viewerRef} className="viewer" />
 
-      {/* Loading */}
       {loading && !dziLoaded && (
         <div className="loading-overlay">
           <div className="loading-spinner" />
@@ -323,16 +393,12 @@ export default function App() {
 
       {/* ── Sidebar ── */}
       <div className="sidebar">
-
-        {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-title-row">
             <span className="sidebar-title">NYC PERMIT PULSE</span>
-            {/* On/off toggle */}
             <button
               className={`overlay-toggle ${overlayOn ? 'on' : 'off'}`}
               onClick={() => setOverlayOn(v => !v)}
-              title={overlayOn ? 'Hide permit markers' : 'Show permit markers'}
             >
               {overlayOn ? 'ON' : 'OFF'}
             </button>
@@ -343,7 +409,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="sidebar-section">
           <button className="section-toggle" onClick={() => setFiltersOpen(v => !v)}>
             <span>FILTERS</span>
@@ -355,44 +420,35 @@ export default function App() {
                 <div className="filter-label">PERMIT TYPE</div>
                 <div className="chips">
                   {ALL_JOB_TYPES.map(jt => (
-                    <button
-                      key={jt}
+                    <button key={jt}
                       className={`chip ${filters.jobTypes.has(jt) ? 'active' : ''}`}
                       style={{ '--chip-color': getJobColor(jt) } as React.CSSProperties}
-                      onClick={() => toggleJobType(jt)}
-                      title={getJobLabel(jt)}
-                    >
+                      onClick={() => toggleJobType(jt)} title={getJobLabel(jt)}>
                       {getJobEmoji(jt)} {jt}
                     </button>
                   ))}
                 </div>
               </div>
-
               <div className="filter-group">
                 <div className="filter-label">BOROUGH</div>
                 <div className="chips">
                   {ALL_BOROUGHS.map(b => (
-                    <button
-                      key={b}
+                    <button key={b}
                       className={`chip ${filters.boroughs.has(b) ? 'active' : ''}`}
-                      onClick={() => toggleBorough(b)}
-                    >
+                      onClick={() => toggleBorough(b)}>
                       {BOROUGH_ABBR[b] ?? b}
                     </button>
                   ))}
                 </div>
               </div>
-
               <div className="filter-group">
                 <div className="filter-label">DATE RANGE</div>
                 <div className="chips">
                   {([1, 7, 30] as const).map(d => (
-                    <button
-                      key={d}
+                    <button key={d}
                       className={`chip ${filters.daysBack === d ? 'active' : ''}`}
                       onClick={() => setFilters(prev => ({ ...prev, daysBack: d }))}
-                      title={d === 1 ? 'Data updates ~24h delayed' : undefined}
-                    >
+                      title={d === 1 ? 'Data updates ~24h delayed' : undefined}>
                       {d === 1 ? '24h' : `${d}d`}
                     </button>
                   ))}
@@ -402,61 +458,46 @@ export default function App() {
           )}
         </div>
 
-        {/* Live Ticker */}
         <div className="sidebar-section sidebar-section--grow">
           <button className="section-toggle" onClick={() => setTickerOpen(v => !v)}>
             <span>LIVE TICKER</span>
             <span className="section-caret">{tickerOpen ? '▾' : '▸'}</span>
           </button>
           {tickerOpen && (
-            <div
-              className="ticker-list"
-              ref={tickerRef}
+            <div className="ticker-list" ref={tickerRef}
               onMouseEnter={() => { tickerPausedRef.current = true; }}
-              onMouseLeave={() => { tickerPausedRef.current = false; }}
-            >
-              {sortedPermits.length === 0 && (
-                <div className="ticker-empty">No permits match filters</div>
-              )}
+              onMouseLeave={() => { tickerPausedRef.current = false; }}>
+              {sortedPermits.length === 0 && <div className="ticker-empty">No permits match filters</div>}
               {tickerPermits.map(({ permit: p, slot }) => (
-                <div
-                  key={`${p.job_filing_number}-${slot}`}
+                <div key={`${p.job_filing_number}-${slot}`}
                   className={`ticker-row ${slot === 0 ? 'ticker-row--active' : ''} ${tickerFlash === (tickerIndex + slot) % sortedPermits.length ? 'ticker-row--flash' : ''}`}
-                  onClick={() => { flyToPermit(p); }}
-                >
+                  onClick={() => { flyToPermit(p); setDrawerPermit(p); }}>
                   <span className="ticker-dot" style={{ background: getJobColor(p.job_type ?? '') }} />
-                  <span className="ticker-type" style={{ color: getJobColor(p.job_type ?? '') }}>
-                    {p.job_type}
-                  </span>
+                  <span className="ticker-type" style={{ color: getJobColor(p.job_type ?? '') }}>{p.job_type}</span>
                   <span className="ticker-address">{formatAddress(p)}</span>
-                  <span className="ticker-date">
-                    {formatDate(p.issued_date ?? p.approved_date)?.split(',')[0]}
-                  </span>
+                  <span className="ticker-date">{formatDate(p.issued_date ?? p.approved_date)?.split(',')[0]}</span>
                 </div>
               ))}
               {sortedPermits.length > 0 && (
-                <div className="ticker-counter">
-                  {tickerIndex + 1} / {sortedPermits.length}
-                </div>
+                <div className="ticker-counter">{tickerIndex + 1} / {sortedPermits.length}</div>
               )}
             </div>
           )}
         </div>
 
-        {/* ── Permit breakdown chart ── */}
         <PermitChart permits={filteredPermits} />
 
-        <div className="sidebar-footer">
-          permit-pulse · isometric.nyc overlay
-        </div>
+        <div className="sidebar-footer">permit-pulse · isometric.nyc overlay</div>
       </div>
 
-      {/* Tooltip */}
-      {tooltip && (
-        <div
-          className="tooltip"
-          style={{ left: tooltip.x, top: tooltip.y - 8, transform: 'translate(-50%, -100%)' }}
-        >
+      {/* ── Permit detail drawer ── */}
+      {drawerPermit && (
+        <PermitDrawer permit={drawerPermit} onClose={() => setDrawerPermit(null)} />
+      )}
+
+      {/* Hover tooltip (only when drawer is closed) */}
+      {tooltip && !drawerPermit && (
+        <div className="tooltip" style={{ left: tooltip.x, top: tooltip.y - 8, transform: 'translate(-50%, -100%)' }}>
           <div className="tooltip-type" style={{ color: getJobColor(tooltip.permit.job_type ?? '') }}>
             {getJobEmoji(tooltip.permit.job_type ?? '')} {getJobLabel(tooltip.permit.job_type ?? '')}
           </div>
@@ -464,9 +505,8 @@ export default function App() {
           {tooltip.permit.owner_business_name && (
             <div className="tooltip-owner">{tooltip.permit.owner_business_name}</div>
           )}
-          <div className="tooltip-date">
-            {formatDate(tooltip.permit.issued_date ?? tooltip.permit.approved_date)}
-          </div>
+          <div className="tooltip-date">{formatDate(tooltip.permit.issued_date ?? tooltip.permit.approved_date)}</div>
+          <div className="tooltip-hint">click for details</div>
         </div>
       )}
     </div>
