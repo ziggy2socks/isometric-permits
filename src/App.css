@@ -628,6 +628,7 @@ html, body, #root {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   white-space: nowrap;
+  /* shift so text is centered on the anchor point */
   transform: translateX(-50%) translateY(-50%);
   /* subtle dark halo so text is legible over any tile */
   text-shadow:

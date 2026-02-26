@@ -87,7 +87,8 @@ export class NeighborhoodLabels {
     this.viewer = viewer;
     this.buildLabels();
     viewer.addHandler('zoom', () => this.update());
-    viewer.addHandler('open', () => this.update());
+    // 'open' has already fired by the time we're constructed — call update() directly
+    this.update();
   }
 
   setEnabled(val: boolean) {
@@ -144,7 +145,7 @@ export class NeighborhoodLabels {
       this.viewer.addOverlay({
         element: el,
         location: new OpenSeadragon.Point(vpX, vpY),
-        placement: OpenSeadragon.Placement.CENTER,
+        placement: OpenSeadragon.Placement.TOP_LEFT,
         checkResize: false,
       });
     }
