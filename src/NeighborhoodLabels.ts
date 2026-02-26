@@ -86,6 +86,7 @@ export class NeighborhoodLabels {
   constructor(viewer: OpenSeadragon.Viewer) {
     this.viewer = viewer;
     this.buildLabels();
+    console.log(`[labels] built: ${this.boroughEls.length} borough, ${this.majorEls.length} major, ${this.allEls.length} NTA`);
     viewer.addHandler('zoom', () => this.update());
     // 'open' has already fired by the time we're constructed — call update() directly
     this.update();
@@ -173,6 +174,7 @@ export class NeighborhoodLabels {
 
     if (tier === this.currentTier) return;
     this.currentTier = tier;
+    console.log(`[labels] zoom=${zoom.toFixed(2)} tier=${tier}`);
 
     // Clear everything
     this.removeOverlays(this.boroughEls);
@@ -180,10 +182,13 @@ export class NeighborhoodLabels {
 
     if (tier === 0) {
       this.addOverlays(this.boroughEls);
+      console.log(`[labels] added ${this.boroughEls.length} borough labels`);
     } else if (tier === 1) {
       this.addOverlays(this.majorEls);
+      console.log(`[labels] added ${this.majorEls.length} major labels`);
     } else {
       this.addOverlays(this.allEls);
+      console.log(`[labels] added ${this.allEls.length} NTA labels`);
     }
   }
 

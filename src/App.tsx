@@ -220,7 +220,7 @@ export default function App() {
   const [tooltip, setTooltip] = useState<{ permit: Permit; x: number; y: number } | null>(null);
   const [drawerPermit, setDrawerPermit] = useState<Permit | null>(null);
   const [dziLoaded, setDziLoaded] = useState(false);
-  const [overlayOn, setOverlayOn] = useState(true);
+  const [overlayOn, setOverlayOn] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [tickerOpen, setTickerOpen] = useState(true);
 
