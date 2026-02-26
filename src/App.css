@@ -631,31 +631,31 @@ html, body, #root {
   /* center on the anchor coordinate */
   transform: translateX(-50%) translateY(-50%);
   text-shadow:
-    0 0 6px rgba(0,0,0,0.95),
-    0 0 14px rgba(0,0,0,0.8),
-    1px 1px 0 rgba(0,0,0,1),
-    -1px -1px 0 rgba(0,0,0,1),
-    1px -1px 0 rgba(0,0,0,1),
-    -1px 1px 0 rgba(0,0,0,1);
+    0 0 8px rgba(0,0,0,0.7),
+    0 0 16px rgba(0,0,0,0.5),
+    1px 1px 0 rgba(0,0,0,0.6),
+    -1px -1px 0 rgba(0,0,0,0.6),
+    1px -1px 0 rgba(0,0,0,0.6),
+    -1px 1px 0 rgba(0,0,0,0.6);
 }
 
 .nta-label--borough {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.2em;
 }
 
 .nta-label--major {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  color: rgba(180, 230, 255, 0.75);
+  color: rgba(255, 255, 255, 0.75);
   letter-spacing: 0.12em;
 }
 
 .nta-label--nta {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 500;
-  color: rgba(160, 210, 240, 0.6);
+  color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.08em;
 }
