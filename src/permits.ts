@@ -20,7 +20,8 @@ const JOBS_BASE = import.meta.env.DEV
 
 export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
   const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - daysBack);
+  // Dataset lags ~24h — add 1 extra day so "24h" actually catches yesterday's data
+  cutoff.setDate(cutoff.getDate() - daysBack - 1);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
   // Scale limit by date range — 1d ~400, 7d ~3500, 30d ~12k
