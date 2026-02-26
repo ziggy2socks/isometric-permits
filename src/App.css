@@ -631,7 +631,7 @@ html, body, #root {
   /* center on the anchor coordinate */
   transform: translateX(-50%) translateY(-50%);
   /* black outline, no blur — Google Maps style */
-  -webkit-text-stroke: 2px rgba(0,0,0,0.7);
+  -webkit-text-stroke: 1px rgba(0,0,0,0.85);
   paint-order: stroke fill;
 }
 
@@ -652,6 +652,6 @@ html, body, #root {
 .nta-label--nta {
   font-size: 11px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.08em;
 }
