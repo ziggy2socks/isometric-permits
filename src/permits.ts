@@ -27,23 +27,24 @@ export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
   // 30d capped at 2000 (most recent) — showing 12k markers is unusable
   const limit = daysBack <= 1 ? 500 : daysBack <= 7 ? 2000 : 2000;
 
-  // Fetch work-type permits (GC, PL, etc.)
-  const workParams = new URLSearchParams({
-    '$order': 'issued_date DESC',
-    '$limit': String(limit),
-    '$where': `issued_date >= '${cutoffStr}' AND latitude IS NOT NULL AND longitude IS NOT NULL`,
-  });
+  // Build query strings manually — URLSearchParams double-encodes '$' as '%24'
+  // which breaks the Socrata API (requires literal $order, $where, etc.)
+  const workQuery = [
+    `$order=issued_date DESC`,
+    `$limit=${limit}`,
+    `$where=issued_date >= '${cutoffStr}' AND latitude IS NOT NULL AND longitude IS NOT NULL`,
+  ].map(p => p.replace(/ /g, '+')).join('&');
 
-  // Fetch NB + Full Demolition job filings
-  const jobParams = new URLSearchParams({
-    '$order': 'approved_date DESC',
-    '$limit': String(Math.round(limit * 0.1)), // NB+DM are ~10% of total
-    '$where': `job_type IN('New Building', 'Full Demolition') AND latitude IS NOT NULL AND approved_date >= '${cutoffStr}'`,
-  });
+  const nbLimit = Math.max(50, Math.round(limit * 0.1));
+  const jobQuery = [
+    `$order=approved_date DESC`,
+    `$limit=${nbLimit}`,
+    `$where=job_type IN('New Building', 'Full Demolition') AND latitude IS NOT NULL AND approved_date >= '${cutoffStr}'`,
+  ].map(p => p.replace(/ /g, '+')).join('&');
 
   const [workRes, jobRes] = await Promise.all([
-    fetch(`${PERMITS_BASE}?${workParams}`),
-    fetch(`${JOBS_BASE}?${jobParams}`),
+    fetch(`${PERMITS_BASE}?${workQuery}`),
+    fetch(`${JOBS_BASE}?${jobQuery}`),
   ]);
 
   if (!workRes.ok) throw new Error(`Permits API error: ${workRes.status}`);
