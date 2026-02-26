@@ -76,9 +76,15 @@ function PermitChart({ permits }: { permits: Permit[] }) {
 // ── Permit detail drawer ──
 function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void }) {
   const color = getJobColor(permit.job_type ?? '');
-  const cost = permit.estimated_job_costs
+  const cost = permit.estimated_job_costs && Number(permit.estimated_job_costs) > 0
     ? `$${Number(permit.estimated_job_costs).toLocaleString()}`
     : null;
+  const contractor = [permit.applicant_business_name, permit.applicant_first_name, permit.applicant_last_name]
+    .filter(Boolean).join(' · ') || null;
+  const expediter = permit.filing_representative_business_name
+    || [permit.filing_representative_first_name, permit.filing_representative_last_name].filter(Boolean).join(' ')
+    || null;
+  const neighborhood = permit.nta ?? null;
 
   return (
     <div className="drawer" style={{ '--drawer-color': color } as React.CSSProperties}>
@@ -90,18 +96,34 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
       </div>
 
       <div className="drawer-address">{formatAddress(permit)}</div>
-      {permit.borough && <div className="drawer-borough">{permit.borough}</div>}
-
-      <div className="drawer-divider" />
+      <div className="drawer-location">
+        {[neighborhood, permit.borough, permit.zip_code].filter(Boolean).join(' · ')}
+      </div>
 
       {permit.job_description && (
-        <div className="drawer-field">
-          <div className="drawer-field-label">DESCRIPTION</div>
-          <div className="drawer-field-value drawer-description">{permit.job_description}</div>
-        </div>
+        <>
+          <div className="drawer-divider" />
+          <div className="drawer-field">
+            <div className="drawer-field-label">DESCRIPTION</div>
+            <div className="drawer-field-value drawer-description">{permit.job_description}</div>
+          </div>
+        </>
       )}
 
+      <div className="drawer-divider" />
       <div className="drawer-grid">
+        {permit.filing_reason && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">FILING TYPE</div>
+            <div className="drawer-field-value">{permit.filing_reason}</div>
+          </div>
+        )}
+        {permit.permit_status && (
+          <div className="drawer-field">
+            <div className="drawer-field-label">STATUS</div>
+            <div className="drawer-field-value">{permit.permit_status}</div>
+          </div>
+        )}
         {permit.issued_date && (
           <div className="drawer-field">
             <div className="drawer-field-label">ISSUED</div>
@@ -120,22 +142,10 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
             <div className="drawer-field-value drawer-cost">{cost}</div>
           </div>
         )}
-        {permit.permit_status && (
-          <div className="drawer-field">
-            <div className="drawer-field-label">STATUS</div>
-            <div className="drawer-field-value">{permit.permit_status}</div>
-          </div>
-        )}
         {permit.work_on_floor && (
           <div className="drawer-field">
-            <div className="drawer-field-label">FLOOR(S)</div>
+            <div className="drawer-field-label">FLOORS</div>
             <div className="drawer-field-value">{permit.work_on_floor}</div>
-          </div>
-        )}
-        {permit.filing_reason && (
-          <div className="drawer-field">
-            <div className="drawer-field-label">FILING</div>
-            <div className="drawer-field-value">{permit.filing_reason}</div>
           </div>
         )}
       </div>
@@ -145,27 +155,41 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
           <div className="drawer-divider" />
           <div className="drawer-field">
             <div className="drawer-field-label">OWNER</div>
-            <div className="drawer-field-value">{permit.owner_business_name || permit.owner_name}</div>
+            <div className="drawer-field-value">
+              {permit.owner_business_name && permit.owner_business_name !== 'Not Applicable'
+                ? permit.owner_business_name
+                : permit.owner_name}
+            </div>
           </div>
         </>
       )}
 
-      {permit.applicant_business_name && (
+      {contractor && (
         <div className="drawer-field">
           <div className="drawer-field-label">CONTRACTOR</div>
-          <div className="drawer-field-value">{permit.applicant_business_name}</div>
+          <div className="drawer-field-value">{contractor}</div>
         </div>
       )}
 
-      {permit.job_filing_number && (
-        <>
-          <div className="drawer-divider" />
-          <div className="drawer-field">
-            <div className="drawer-field-label">FILING #</div>
-            <div className="drawer-field-value drawer-filing">{permit.job_filing_number}</div>
-          </div>
-        </>
+      {expediter && (
+        <div className="drawer-field">
+          <div className="drawer-field-label">EXPEDITER</div>
+          <div className="drawer-field-value drawer-muted">{expediter}</div>
+        </div>
       )}
+
+      <div className="drawer-divider" />
+      <div className="drawer-meta-row">
+        {permit.job_filing_number && (
+          <span className="drawer-meta-item">Filing: {permit.job_filing_number}</span>
+        )}
+        {permit.bin && (
+          <span className="drawer-meta-item">BIN: {permit.bin}</span>
+        )}
+        {permit.community_board && (
+          <span className="drawer-meta-item">CB: {permit.community_board}</span>
+        )}
+      </div>
     </div>
   );
 }

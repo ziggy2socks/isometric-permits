@@ -593,3 +593,29 @@ html, body, #root {
   margin-top: 4px;
   opacity: 0.7;
 }
+
+.drawer-location {
+  padding: 0 14px 10px;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.drawer-muted {
+  opacity: 0.7;
+}
+
+.drawer-meta-row {
+  padding: 8px 14px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drawer-meta-item {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  background: rgba(255,255,255,0.04);
+  padding: 2px 6px;
+}
