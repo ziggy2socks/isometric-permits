@@ -151,8 +151,8 @@ export default function App() {
 
     let placed = 0;
     filteredPermits.forEach((permit, idx) => {
-      const lat = parseFloat(permit.gis_latitude ?? '');
-      const lng = parseFloat(permit.gis_longitude ?? '');
+      const lat = parseFloat(permit.latitude ?? '');
+      const lng = parseFloat(permit.longitude ?? '');
       if (isNaN(lat) || isNaN(lng)) return;
 
       const { x: imageX, y: imageY } = latlngToImagePx(lat, lng);
@@ -181,7 +181,7 @@ export default function App() {
         checkResize: false,
       });
 
-      const key = permit.job__ ? `job-${permit.job__}` : `idx-${idx}`;
+      const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${idx}`;
       overlayMarkersRef.current.set(key, el);
       placed++;
     });
@@ -196,8 +196,8 @@ export default function App() {
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;
     if (!viewer) return;
-    const lat = parseFloat(permit.gis_latitude ?? '');
-    const lng = parseFloat(permit.gis_longitude ?? '');
+    const lat = parseFloat(permit.latitude ?? '');
+    const lng = parseFloat(permit.longitude ?? '');
     if (isNaN(lat) || isNaN(lng)) return;
     const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
     viewer.viewport.panTo(new OpenSeadragon.Point(imgX / IMAGE_DIMS.width, imgY / IMAGE_DIMS.width));
@@ -218,8 +218,8 @@ export default function App() {
 
   const recentPermits = [...filteredPermits]
     .sort((a, b) =>
-      new Date(b.issuance_date ?? b.filing_date ?? '').getTime() -
-      new Date(a.issuance_date ?? a.filing_date ?? '').getTime()
+      new Date(b.issued_date ?? b.approved_date ?? '').getTime() -
+      new Date(a.issued_date ?? a.approved_date ?? '').getTime()
     )
     .slice(0, 30);
 
@@ -331,7 +331,7 @@ export default function App() {
               )}
               {recentPermits.map((p, i) => (
                 <div
-                  key={`${p.job__}-${i}`}
+                  key={`${p.job_filing_number}-${i}`}
                   className="ticker-row"
                   onClick={() => flyToPermit(p)}
                 >
@@ -341,7 +341,7 @@ export default function App() {
                   </span>
                   <span className="ticker-address">{formatAddress(p)}</span>
                   <span className="ticker-date">
-                    {formatDate(p.issuance_date ?? p.filing_date)?.split(',')[0]}
+                    {formatDate(p.issued_date ?? p.approved_date)?.split(',')[0]}
                   </span>
                 </div>
               ))}
@@ -364,11 +364,11 @@ export default function App() {
             {getJobEmoji(tooltip.permit.job_type ?? '')} {getJobLabel(tooltip.permit.job_type ?? '')}
           </div>
           <div className="tooltip-address">{formatAddress(tooltip.permit)}</div>
-          {tooltip.permit.owner_s_business_name && (
-            <div className="tooltip-owner">{tooltip.permit.owner_s_business_name}</div>
+          {tooltip.permit.owner_business_name && (
+            <div className="tooltip-owner">{tooltip.permit.owner_business_name}</div>
           )}
           <div className="tooltip-date">
-            {formatDate(tooltip.permit.issuance_date ?? tooltip.permit.filing_date)}
+            {formatDate(tooltip.permit.issued_date ?? tooltip.permit.approved_date)}
           </div>
         </div>
       )}

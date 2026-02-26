@@ -8,25 +8,44 @@ export interface MapConfig {
   tile_step: number;
 }
 
+// DOB NOW: Build – Approved Permits (rbx6-tga4)
+// Current data, updated daily. Replaces legacy ipu4-2q9a (stale since 2020).
 export interface Permit {
-  job__: string;
-  job_type: string;
-  permit_type?: string;
-  permit_status?: string;
-  house__?: string;
+  // Identity
+  job_filing_number?: string;
+  work_permit?: string;
+  tracking_number?: string;
+  bin?: string;
+
+  // Address
+  house_no?: string;
   street_name?: string;
   borough?: string;
-  owner_s_business_name?: string;
-  permittee_s_business_name?: string;
-  filing_date?: string;
-  issuance_date?: string;
-  gis_latitude?: string;
-  gis_longitude?: string;
+  zip_code?: string;
+
+  // Work
+  work_type?: string;         // verbose: "General Construction", "Full Demolition", etc.
+  job_type?: string;          // our normalized code: NB/DM/A1/etc. (derived client-side)
+  permit_status?: string;
   job_description?: string;
-  bin__?: string;
+  filing_reason?: string;
+
+  // Dates (ISO format: 2026-02-24T00:00:00.000)
+  issued_date?: string;
+  approved_date?: string;
+  expired_date?: string;
+
+  // Owner / Applicant
+  owner_name?: string;
+  owner_business_name?: string;
+  applicant_business_name?: string;
+
+  // Coordinates
+  latitude?: string;
+  longitude?: string;
 }
 
-export type JobType = 'NB' | 'DM' | 'A1' | 'A2' | 'A3' | 'EW' | 'PL' | 'SG' | 'OTHER';
+export type JobType = 'NB' | 'DM' | 'A1' | 'OTHER';
 
 export interface FilterState {
   jobTypes: Set<string>;
