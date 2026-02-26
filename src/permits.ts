@@ -23,9 +23,9 @@ export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
   cutoff.setDate(cutoff.getDate() - daysBack);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
-  // Scale limit by date range — 1d ~400, 7d ~3500, 30d ~12k, 90d ~36k
-  // Cap at 5000 for performance; prioritize recency (ORDER BY DESC)
-  const limit = daysBack <= 1 ? 500 : daysBack <= 7 ? 2000 : 5000;
+  // Scale limit by date range — 1d ~400, 7d ~3500, 30d ~12k
+  // 30d capped at 2000 (most recent) — showing 12k markers is unusable
+  const limit = daysBack <= 1 ? 500 : daysBack <= 7 ? 2000 : 2000;
 
   // Fetch work-type permits (GC, PL, etc.)
   const workParams = new URLSearchParams({

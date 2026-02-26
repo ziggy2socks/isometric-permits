@@ -75,7 +75,7 @@ export default function App() {
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
     boroughs: new Set(ALL_BOROUGHS),
-    daysBack: 30,
+    daysBack: 7,
   });
 
   const filteredPermits = permits.filter(p => {
@@ -303,7 +303,7 @@ export default function App() {
               <div className="filter-group">
                 <div className="filter-label">DATE RANGE</div>
                 <div className="chips">
-                  {([1, 7, 30, 90] as const).map(d => (
+                  {([1, 7, 30] as const).map(d => (
                     <button
                       key={d}
                       className={`chip ${filters.daysBack === d ? 'active' : ''}`}
