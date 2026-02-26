@@ -1,137 +1,90 @@
 /**
- * NeighborhoodLabels — adds LOD neighborhood labels as OSD overlays.
+ * NeighborhoodLabels — LOD neighborhood labels drawn on a plain div overlay.
  *
- * Zoom tiers (OSD zoom units, not tile level):
- *   < 1.5  → borough labels only (5 labels)
- *   1.5–4  → major neighborhoods (~40, one per "district" area)
- *   > 4    → all 197 NTAs
+ * We intentionally avoid OSD's addOverlay() system, which wraps every element
+ * in a wrapper div and calls drawHTML() every animation frame — clobbering
+ * transforms and fighting us for control of element styles.
  *
- * Labels render below permit markers (z-index 10 vs markers at default).
+ * Instead: one absolutely-positioned container div sits above the OSD canvas,
+ * and we position each label manually using viewport.pixelFromPoint().
+ * We hook OSD's 'update-viewport' event to reposition on every frame.
+ *
+ * Zoom tiers:
+ *   zoom < 1.5  → 5 borough labels
+ *   zoom 1.5–4  → ~40 major neighborhoods
+ *   zoom > 4    → all 197 NTAs
  */
 
 import OpenSeadragon from 'openseadragon';
 import { latlngToImagePx, IMAGE_DIMS } from './coordinates';
 import ntaData from './nta_centroids.json';
 
-// Borough centroids (manually placed at geographic center)
 const BOROUGH_LABELS = [
-  { name: 'MANHATTAN',   lat: 40.7831, lng: -73.9712 },
-  { name: 'BROOKLYN',    lat: 40.6501, lng: -73.9496 },
-  { name: 'QUEENS',      lat: 40.7282, lng: -73.7949 },
-  { name: 'BRONX',       lat: 40.8448, lng: -73.8648 },
+  { name: 'MANHATTAN',     lat: 40.7831, lng: -73.9712 },
+  { name: 'BROOKLYN',      lat: 40.6501, lng: -73.9496 },
+  { name: 'QUEENS',        lat: 40.7282, lng: -73.7949 },
+  { name: 'BRONX',         lat: 40.8448, lng: -73.8648 },
   { name: 'STATEN ISLAND', lat: 40.5795, lng: -74.1502 },
 ];
 
-// NTAs to highlight at medium zoom — roughly one per recognizable district.
-// Hand-selected for geographic spread and name recognition.
 const MAJOR_NTA_CODES = new Set([
-  // Manhattan
-  'MN2501', // Midtown-Midtown South
-  'MN1701', // Upper East Side-Carnegie Hill
-  'MN2301', // West Village
-  'MN2701', // Financial District-Battery Park City
-  'MN2001', // Chelsea-Hudson Yards
-  'MN3301', // Inwood
-  'MN2401', // SoHo-TriBeCa-Civic Center-Little Italy
-  'MN1301', // Washington Heights North
-  'MN0901', // Morningside Heights-Hamilton Heights
-  'MN1101', // Central Harlem North-Polo Grounds
-  'MN1001', // East Harlem South
-  'MN2101', // Gramercy
-  'MN2201', // Murray Hill-Kips Bay
-  'MN1601', // Upper West Side
-  'MN1501', // Lincoln Square
-  // Brooklyn
-  'BK0101', // Greenpoint
-  'BK0901', // Park Slope-Gowanus
-  'BK7301', // Williamsburg
-  'BK9101', // Crown Heights North
-  'BK4501', // Flatbush
-  'BK8801', // Bay Ridge
-  'BK6101', // Sheepshead Bay-Gerritsen Beach-Manhattan Beach
-  'BK5501', // Sunset Park West
-  'BK7701', // Bushwick North
-  'BK3101', // DUMBO-Vinegar Hill-Downtown Brooklyn-Boerum Hill
-  // Queens
-  'QN3101', // Astoria
-  'QN2601', // Long Island City-Hunters Point
-  'QN4901', // Jackson Heights
-  'QN6301', // Flushing
-  'QN5301', // Jamaica
-  'QN7101', // Far Rockaway-Bayswater
-  'QN4101', // Elmhurst
-  'QN5701', // Bayside-Bayside Hills
-  // Bronx
-  'BX0101', // Mott Haven-Port Morris
-  'BX3101', // Fordham South
-  'BX6301', // Co-op City
-  'BX0901', // Highbridge
-  'BX5301', // Pelham Parkway
-  // Staten Island
-  'SI0101', // St. George-New Brighton
-  'SI0501', // Stapleton-Rosebank
-  'SI2501', // Tottenville-Charleston
+  'MN2501','MN1701','MN2301','MN2701','MN2001','MN3301','MN2401','MN1301',
+  'MN0901','MN1101','MN1001','MN2101','MN2201','MN1601','MN1501',
+  'BK0101','BK0901','BK7301','BK9101','BK4501','BK8801','BK6101','BK5501','BK7701','BK3101',
+  'QN3101','QN2601','QN4901','QN6301','QN5301','QN7101','QN4101','QN5701',
+  'BX0101','BX3101','BX6301','BX0901','BX5301',
+  'SI0101','SI0501','SI2501',
 ]);
 
-type LabelEl = { el: HTMLDivElement; vpX: number; vpY: number };
+interface LabelEntry {
+  name: string;
+  vpX: number;  // OSD viewport X (0–1 range using image width as unit)
+  vpY: number;
+  tier: 'borough' | 'major' | 'nta';
+  el: HTMLSpanElement;
+}
 
 export class NeighborhoodLabels {
   private viewer: OpenSeadragon.Viewer;
-  private boroughEls: LabelEl[] = [];
-  private majorEls: LabelEl[] = [];
-  private allEls: LabelEl[] = [];
+  private container: HTMLDivElement;
+  private labels: LabelEntry[] = [];
   private currentTier: 0 | 1 | 2 | -1 = -1;
   private enabled = true;
+  private rafId: number | null = null;
 
   constructor(viewer: OpenSeadragon.Viewer) {
     this.viewer = viewer;
+
+    // Create a container div that sits on top of the OSD canvas
+    this.container = document.createElement('div');
+    this.container.style.cssText = `
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 200;
+    `;
+    // Insert into OSD's element (the viewer container), above everything
+    viewer.element.appendChild(this.container);
+
     this.buildLabels();
-    console.log(`[labels] built: ${this.boroughEls.length} borough, ${this.majorEls.length} major, ${this.allEls.length} NTA`);
+    console.log(`[labels] built: ${this.labels.filter(l=>l.tier==='borough').length} borough, ${this.labels.filter(l=>l.tier==='major').length} major, ${this.labels.filter(l=>l.tier==='nta').length} NTA`);
 
-    // Force OSD's overlay container above the tile canvas.
-    // OSD structure: .openseadragon-canvas > [<canvas> (tiles), <div> (overlays)]
-    // The tile canvas renders on top by default — bump overlay container's z-index.
-    const overlayContainer = (viewer as any).overlaysContainer as HTMLElement | undefined;
-    if (overlayContainer) {
-      overlayContainer.style.zIndex = '10';
-      overlayContainer.style.position = 'relative';
-      console.log('[labels] overlaysContainer z-index set');
-    } else {
-      console.warn('[labels] overlaysContainer not found on viewer');
-    }
+    // Reposition on every viewport update
+    viewer.addHandler('update-viewport', () => this.draw());
+    viewer.addHandler('zoom', () => this.updateTier());
+    viewer.addHandler('pan', () => this.draw());
 
-    viewer.addHandler('zoom', () => this.update());
-    // 'open' has already fired by the time we're constructed — call update() directly
-    this.update();
+    this.updateTier();
   }
 
   setEnabled(val: boolean) {
     this.enabled = val;
-    if (!val) {
-      this.hideAll();
-    } else {
-      this.currentTier = -1; // force re-render
-      this.update();
-    }
+    this.container.style.display = val ? '' : 'none';
+    if (val) { this.currentTier = -1; this.updateTier(); }
   }
 
-  private makeLabel(text: string, tier: 'borough' | 'major' | 'nta'): HTMLDivElement {
-    const el = document.createElement('div');
-    el.className = `nta-label nta-label--${tier}`;
-    el.style.pointerEvents = 'none';
-    el.style.zIndex = '100';
-    el.style.position = 'absolute';
-    el.style.overflow = 'visible';
-    // Inner span holds text + centering transform.
-    // OSD's drawHTML clears transform on the outer element every frame — inner span is safe.
-    const inner = document.createElement('span');
-    inner.className = 'nta-label-inner';
-    inner.textContent = text;
-    el.appendChild(inner);
-    return el;
-  }
-
-  private toVp(lat: number, lng: number): { vpX: number; vpY: number } {
+  private toVp(lat: number, lng: number) {
     const { x, y } = latlngToImagePx(lat, lng);
     return {
       vpX: x / IMAGE_DIMS.width,
@@ -140,51 +93,34 @@ export class NeighborhoodLabels {
   }
 
   private buildLabels() {
-    // Borough labels
     for (const b of BOROUGH_LABELS) {
       const { vpX, vpY } = this.toVp(b.lat, b.lng);
-      const el = this.makeLabel(b.name, 'borough');
-      this.boroughEls.push({ el, vpX, vpY });
+      const el = this.makeEl(b.name, 'borough');
+      this.labels.push({ name: b.name, vpX, vpY, tier: 'borough', el });
     }
-
-    // NTA labels — split into major and all
     for (const nta of ntaData) {
       const { vpX, vpY } = this.toVp(nta.lat, nta.lng);
       const isMajor = MAJOR_NTA_CODES.has(nta.code);
       const tier = isMajor ? 'major' : 'nta';
-      const el = this.makeLabel(nta.name, tier);
-      const entry = { el, vpX, vpY };
-      if (isMajor) this.majorEls.push(entry);
-      this.allEls.push(entry);
+      const el = this.makeEl(nta.name, tier);
+      this.labels.push({ name: nta.name, vpX, vpY, tier, el });
+    }
+    // All labels start hidden
+    for (const l of this.labels) {
+      l.el.style.display = 'none';
+      this.container.appendChild(l.el);
     }
   }
 
-  private addOverlays(labels: LabelEl[]) {
-    for (const { el, vpX, vpY } of labels) {
-      this.viewer.addOverlay({
-        element: el,
-        location: new OpenSeadragon.Point(vpX, vpY),
-        placement: OpenSeadragon.Placement.TOP_LEFT,
-        checkResize: false,
-      });
-    }
+  private makeEl(text: string, tier: 'borough' | 'major' | 'nta'): HTMLSpanElement {
+    const el = document.createElement('span');
+    el.className = `nta-label nta-label--${tier}`;
+    el.textContent = text;
+    return el;
   }
 
-  private removeOverlays(labels: LabelEl[]) {
-    for (const { el } of labels) {
-      try { this.viewer.removeOverlay(el); } catch (_) { /* already removed */ }
-    }
-  }
-
-  private hideAll() {
-    this.removeOverlays(this.boroughEls);
-    this.removeOverlays(this.allEls);
-  }
-
-  update() {
-    if (!this.enabled) return;
-    const zoom = this.viewer.viewport.getZoom();
-
+  private updateTier() {
+    const zoom = this.viewer.viewport?.getZoom() ?? 1;
     let tier: 0 | 1 | 2;
     if (zoom < 1.5) tier = 0;
     else if (zoom < 4) tier = 1;
@@ -192,25 +128,35 @@ export class NeighborhoodLabels {
 
     if (tier === this.currentTier) return;
     this.currentTier = tier;
-    console.log(`[labels] zoom=${zoom.toFixed(2)} tier=${tier}`);
+    console.log(`[labels] zoom=${zoom.toFixed(2)} → tier ${tier}`);
 
-    // Clear everything
-    this.removeOverlays(this.boroughEls);
-    this.removeOverlays(this.allEls);
+    for (const l of this.labels) {
+      const show =
+        (tier === 0 && l.tier === 'borough') ||
+        (tier === 1 && (l.tier === 'borough' || l.tier === 'major')) ||
+        (tier === 2);
+      l.el.style.display = show ? '' : 'none';
+    }
 
-    if (tier === 0) {
-      this.addOverlays(this.boroughEls);
-      console.log(`[labels] added ${this.boroughEls.length} borough labels`);
-    } else if (tier === 1) {
-      this.addOverlays(this.majorEls);
-      console.log(`[labels] added ${this.majorEls.length} major labels`);
-    } else {
-      this.addOverlays(this.allEls);
-      console.log(`[labels] added ${this.allEls.length} NTA labels`);
+    this.draw();
+  }
+
+  private draw() {
+    if (!this.enabled) return;
+    const viewport = this.viewer.viewport;
+    if (!viewport) return;
+
+    for (const l of this.labels) {
+      if (l.el.style.display === 'none') continue;
+      // Convert OSD viewport point → screen pixel
+      const px = viewport.pixelFromPoint(new OpenSeadragon.Point(l.vpX, l.vpY), true);
+      l.el.style.left = `${px.x}px`;
+      l.el.style.top  = `${px.y}px`;
     }
   }
 
   destroy() {
-    this.hideAll();
+    if (this.rafId !== null) cancelAnimationFrame(this.rafId);
+    this.container.remove();
   }
 }

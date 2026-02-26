@@ -622,54 +622,40 @@ html, body, #root {
 
 /* ═══ Neighborhood Labels ═══ */
 .nta-label {
+  position: absolute;
   pointer-events: none;
   user-select: none;
   font-family: 'JetBrains Mono', 'Fira Mono', monospace;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
   white-space: nowrap;
-  /* centering handled on inner span — OSD clears transform on the outer el every frame */
-  /* subtle dark halo so text is legible over any tile */
+  /* center on the anchor coordinate */
+  transform: translateX(-50%) translateY(-50%);
   text-shadow:
-    0 0 6px rgba(0,0,0,0.9),
-    0 0 12px rgba(0,0,0,0.7),
-    1px 1px 0 rgba(0,0,0,0.9),
-    -1px -1px 0 rgba(0,0,0,0.9),
-    1px -1px 0 rgba(0,0,0,0.9),
-    -1px 1px 0 rgba(0,0,0,0.9);
+    0 0 6px rgba(0,0,0,0.95),
+    0 0 14px rgba(0,0,0,0.8),
+    1px 1px 0 rgba(0,0,0,1),
+    -1px -1px 0 rgba(0,0,0,1),
+    1px -1px 0 rgba(0,0,0,1),
+    -1px 1px 0 rgba(0,0,0,1);
 }
 
-/* Borough — large, bright */
-.nta-label--borough .nta-label-inner {
+.nta-label--borough {
   font-size: 15px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.8);
   letter-spacing: 0.2em;
 }
 
-/* Major neighborhood — medium, cyan-tinted */
-.nta-label--major .nta-label-inner {
+.nta-label--major {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(180, 230, 255, 0.7);
+  color: rgba(180, 230, 255, 0.75);
   letter-spacing: 0.12em;
 }
 
-/* All NTAs — small, subtle */
-.nta-label--nta .nta-label-inner {
+.nta-label--nta {
   font-size: 8px;
   font-weight: 500;
-  color: rgba(160, 210, 240, 0.55);
+  color: rgba(160, 210, 240, 0.6);
   letter-spacing: 0.08em;
-}
-
-/* Inner span — apply centering transform here, OSD won't touch it */
-.nta-label-inner {
-  display: block;
-  transform: translateX(-50%) translateY(-50%);
-  white-space: nowrap;
-  font-family: inherit;
-  letter-spacing: inherit;
-  text-shadow: inherit;
-  text-transform: uppercase;
 }
