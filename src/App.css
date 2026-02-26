@@ -630,13 +630,9 @@ html, body, #root {
   white-space: nowrap;
   /* center on the anchor coordinate */
   transform: translateX(-50%) translateY(-50%);
-  text-shadow:
-    0 0 8px rgba(0,0,0,0.7),
-    0 0 16px rgba(0,0,0,0.5),
-    1px 1px 0 rgba(0,0,0,0.6),
-    -1px -1px 0 rgba(0,0,0,0.6),
-    1px -1px 0 rgba(0,0,0,0.6),
-    -1px 1px 0 rgba(0,0,0,0.6);
+  /* black outline, no blur — Google Maps style */
+  -webkit-text-stroke: 2px rgba(0,0,0,0.7);
+  paint-order: stroke fill;
 }
 
 .nta-label--borough {
@@ -647,15 +643,15 @@ html, body, #root {
 }
 
 .nta-label--major {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.8);
   letter-spacing: 0.12em;
 }
 
 .nta-label--nta {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.65);
   letter-spacing: 0.08em;
 }
