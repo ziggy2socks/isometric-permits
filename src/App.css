@@ -628,8 +628,7 @@ html, body, #root {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   white-space: nowrap;
-  /* shift so text is centered on the anchor point */
-  transform: translateX(-50%) translateY(-50%);
+  /* centering handled on inner span — OSD clears transform on the outer el every frame */
   /* subtle dark halo so text is legible over any tile */
   text-shadow:
     0 0 6px rgba(0,0,0,0.9),
@@ -641,7 +640,7 @@ html, body, #root {
 }
 
 /* Borough — large, bright */
-.nta-label--borough {
+.nta-label--borough .nta-label-inner {
   font-size: 15px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.75);
@@ -649,7 +648,7 @@ html, body, #root {
 }
 
 /* Major neighborhood — medium, cyan-tinted */
-.nta-label--major {
+.nta-label--major .nta-label-inner {
   font-size: 10px;
   font-weight: 600;
   color: rgba(180, 230, 255, 0.7);
@@ -657,9 +656,20 @@ html, body, #root {
 }
 
 /* All NTAs — small, subtle */
-.nta-label--nta {
+.nta-label--nta .nta-label-inner {
   font-size: 8px;
   font-weight: 500;
   color: rgba(160, 210, 240, 0.55);
   letter-spacing: 0.08em;
+}
+
+/* Inner span — apply centering transform here, OSD won't touch it */
+.nta-label-inner {
+  display: block;
+  transform: translateX(-50%) translateY(-50%);
+  white-space: nowrap;
+  font-family: inherit;
+  letter-spacing: inherit;
+  text-shadow: inherit;
+  text-transform: uppercase;
 }

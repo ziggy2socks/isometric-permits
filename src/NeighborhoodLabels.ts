@@ -118,11 +118,16 @@ export class NeighborhoodLabels {
   private makeLabel(text: string, tier: 'borough' | 'major' | 'nta'): HTMLDivElement {
     const el = document.createElement('div');
     el.className = `nta-label nta-label--${tier}`;
-    el.textContent = text;
     el.style.pointerEvents = 'none';
     el.style.zIndex = '100';
     el.style.position = 'absolute';
-    el.style.whiteSpace = 'nowrap';
+    el.style.overflow = 'visible';
+    // Inner span holds text + centering transform.
+    // OSD's drawHTML clears transform on the outer element every frame — inner span is safe.
+    const inner = document.createElement('span');
+    inner.className = 'nta-label-inner';
+    inner.textContent = text;
+    el.appendChild(inner);
     return el;
   }
 
