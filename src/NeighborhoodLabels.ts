@@ -24,7 +24,7 @@ const BOROUGH_LABELS = [
   { name: 'BROOKLYN',      lat: 40.6501, lng: -73.9496 },
   { name: 'QUEENS',        lat: 40.7282, lng: -73.7949 },
   { name: 'BRONX',         lat: 40.8448, lng: -73.8648 },
-  { name: 'STATEN ISLAND', lat: 40.5795, lng: -74.1502 },
+  { name: 'STATEN ISLAND', lat: 40.6050, lng: -74.0800 },
 ];
 
 const MAJOR_NTA_CODES = new Set([
