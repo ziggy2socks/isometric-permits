@@ -119,7 +119,7 @@ export default function App() {
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
     boroughs: new Set(ALL_BOROUGHS),
-    daysBack: 7,
+    daysBack: 1,
   });
 
   const filteredPermits = permits.filter(p => {
