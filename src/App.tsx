@@ -79,6 +79,9 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
   const cost = permit.estimated_job_costs && Number(permit.estimated_job_costs) > 0
     ? `$${Number(permit.estimated_job_costs).toLocaleString()}`
     : null;
+  const JUNK = ['PR', 'Not Applicable', 'N/A', ''];
+  const cleanOwner = [permit.owner_business_name, permit.owner_name]
+    .find(v => v && !JUNK.includes(v)) ?? null;
   const contractor = [permit.applicant_business_name, permit.applicant_first_name, permit.applicant_last_name]
     .filter(Boolean).join(' · ') || null;
   const expediter = permit.filing_representative_business_name
@@ -150,16 +153,12 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
         )}
       </div>
 
-      {(permit.owner_business_name || permit.owner_name) && (
+      {cleanOwner && (
         <>
           <div className="drawer-divider" />
           <div className="drawer-field">
             <div className="drawer-field-label">OWNER</div>
-            <div className="drawer-field-value">
-              {permit.owner_business_name && permit.owner_business_name !== 'Not Applicable'
-                ? permit.owner_business_name
-                : permit.owner_name}
-            </div>
+            <div className="drawer-field-value">{cleanOwner}</div>
           </div>
         </>
       )}

@@ -60,23 +60,12 @@ export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
     job_type: workTypeToCode(p.work_type ?? ''),
   }));
 
-  // Normalize job filings — map field names to match Permit interface
+  // Normalize job filings — spread all fields, just remap a few
   const jobPermits: Permit[] = jobRaw.map(p => ({
-    job_filing_number: p.job_filing_number,
-    house_no: p.house_no,
-    street_name: p.street_name,
-    borough: p.borough,
-    zip_code: p.zip_code,
+    ...p,
     work_type: p.job_type,                         // "New Building" / "Full Demolition"
     job_type: p.job_type === 'New Building' ? 'NB' : 'DM',
-    permit_status: p.permit_status,
-    issued_date: p.approved_date,                  // use approved_date as the date
-    approved_date: p.approved_date,
-    owner_name: p.owner_name,
-    owner_business_name: p.owner_business_name,
-    applicant_business_name: p.applicant_business_name,
-    latitude: p.latitude,
-    longitude: p.longitude,
+    issued_date: p.approved_date,                  // use approved_date as the issued date
   }));
 
   return [...workPermits, ...jobPermits];
