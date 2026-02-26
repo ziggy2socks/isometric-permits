@@ -12,6 +12,7 @@ import {
   ALL_JOB_TYPES,
   ALL_BOROUGHS,
 } from './permits';
+import { NeighborhoodLabels } from './NeighborhoodLabels';
 import './App.css';
 
 const TILE_BASE = import.meta.env.DEV
@@ -211,6 +212,7 @@ export default function App() {
   const viewerRef = useRef<HTMLDivElement>(null);
   const osdRef = useRef<OpenSeadragon.Viewer | null>(null);
   const overlayMarkersRef = useRef<Map<string, HTMLElement>>(new Map());
+  const labelsRef = useRef<NeighborhoodLabels | null>(null);
 
   const [permits, setPermits] = useState<Permit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -256,10 +258,20 @@ export default function App() {
       imageSmoothingEnabled: false,
       drawer: 'canvas',
     });
-    viewer.addHandler('open', () => { setDziLoaded(true); (window as any).__osd = viewer; });
+    viewer.addHandler('open', () => {
+      setDziLoaded(true);
+      (window as any).__osd = viewer;
+      // Initialize neighborhood labels after tiles open
+      labelsRef.current = new NeighborhoodLabels(viewer);
+    });
     osdRef.current = viewer;
     (window as any).__osd = viewer;
-    return () => { viewer.destroy(); osdRef.current = null; };
+    return () => {
+      labelsRef.current?.destroy();
+      labelsRef.current = null;
+      viewer.destroy();
+      osdRef.current = null;
+    };
   }, []);
 
   // Fetch permits

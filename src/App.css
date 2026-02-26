@@ -619,3 +619,46 @@ html, body, #root {
   background: rgba(255,255,255,0.04);
   padding: 2px 6px;
 }
+
+/* ═══ Neighborhood Labels ═══ */
+.nta-label {
+  pointer-events: none;
+  user-select: none;
+  font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transform: translateX(-50%) translateY(-50%);
+  /* subtle dark halo so text is legible over any tile */
+  text-shadow:
+    0 0 6px rgba(0,0,0,0.9),
+    0 0 12px rgba(0,0,0,0.7),
+    1px 1px 0 rgba(0,0,0,0.9),
+    -1px -1px 0 rgba(0,0,0,0.9),
+    1px -1px 0 rgba(0,0,0,0.9),
+    -1px 1px 0 rgba(0,0,0,0.9);
+}
+
+/* Borough — large, bright */
+.nta-label--borough {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.2em;
+}
+
+/* Major neighborhood — medium, cyan-tinted */
+.nta-label--major {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(180, 230, 255, 0.7);
+  letter-spacing: 0.12em;
+}
+
+/* All NTAs — small, subtle */
+.nta-label--nta {
+  font-size: 8px;
+  font-weight: 500;
+  color: rgba(160, 210, 240, 0.55);
+  letter-spacing: 0.08em;
+}
