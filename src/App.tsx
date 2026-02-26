@@ -323,9 +323,9 @@ export default function App() {
         setTooltip(null);
         el.style.opacity = String(opacity);
       });
-      el.addEventListener('click', () => {
-        setDrawerPermit(permit);
-        flyToPermit(permit);
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setDrawerPermit(permit); // open drawer, don't move the map
       });
 
       viewer.addOverlay({
@@ -351,9 +351,18 @@ export default function App() {
     const lng = parseFloat(permit.longitude ?? '');
     if (isNaN(lat) || isNaN(lng)) return;
     const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
-    viewer.viewport.panTo(new OpenSeadragon.Point(imgX / IMAGE_DIMS.width, imgY / IMAGE_DIMS.width));
+
+    // Offset pan target so permit lands in center of visible map area
+    // Panels occupy left side: sidebar (260px) + drawer (280px when open) = up to 540px
+    // Convert pixel offset to OSD viewport units (viewport width = 1.0 across full window)
+    const panelWidth = drawerPermit ? 540 : 260;
+    const vpOffset = (panelWidth / 2) / window.innerWidth;
+    const targetVpX = imgX / IMAGE_DIMS.width + vpOffset;
+    const targetVpY = imgY / IMAGE_DIMS.width;
+
+    viewer.viewport.panTo(new OpenSeadragon.Point(targetVpX, targetVpY));
     viewer.viewport.zoomTo(viewer.viewport.getZoom() > 4 ? viewer.viewport.getZoom() : 6);
-  }, []);
+  }, [drawerPermit]);
 
   const toggleJobType = (jt: string) => setFilters(prev => {
     const next = new Set(prev.jobTypes);
@@ -494,7 +503,7 @@ export default function App() {
               {tickerPermits.map(({ permit: p, slot }) => (
                 <div key={`${p.job_filing_number}-${slot}`}
                   className={`ticker-row ${slot === 0 ? 'ticker-row--active' : ''} ${tickerFlash === (tickerIndex + slot) % sortedPermits.length ? 'ticker-row--flash' : ''}`}
-                  onClick={() => { flyToPermit(p); setDrawerPermit(p); }}>
+                  onClick={() => { setDrawerPermit(p); flyToPermit(p); }}>
                   <span className="ticker-dot" style={{ background: getJobColor(p.job_type ?? '') }} />
                   <span className="ticker-type" style={{ color: getJobColor(p.job_type ?? '') }}>{p.job_type}</span>
                   <span className="ticker-address">{formatAddress(p)}</span>
