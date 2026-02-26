@@ -87,6 +87,19 @@ export class NeighborhoodLabels {
     this.viewer = viewer;
     this.buildLabels();
     console.log(`[labels] built: ${this.boroughEls.length} borough, ${this.majorEls.length} major, ${this.allEls.length} NTA`);
+
+    // Force OSD's overlay container above the tile canvas.
+    // OSD structure: .openseadragon-canvas > [<canvas> (tiles), <div> (overlays)]
+    // The tile canvas renders on top by default — bump overlay container's z-index.
+    const overlayContainer = (viewer as any).overlaysContainer as HTMLElement | undefined;
+    if (overlayContainer) {
+      overlayContainer.style.zIndex = '10';
+      overlayContainer.style.position = 'relative';
+      console.log('[labels] overlaysContainer z-index set');
+    } else {
+      console.warn('[labels] overlaysContainer not found on viewer');
+    }
+
     viewer.addHandler('zoom', () => this.update());
     // 'open' has already fired by the time we're constructed — call update() directly
     this.update();
@@ -107,7 +120,7 @@ export class NeighborhoodLabels {
     el.className = `nta-label nta-label--${tier}`;
     el.textContent = text;
     el.style.pointerEvents = 'none';
-    el.style.zIndex = '10';
+    el.style.zIndex = '100';
     el.style.position = 'absolute';
     el.style.whiteSpace = 'nowrap';
     return el;
