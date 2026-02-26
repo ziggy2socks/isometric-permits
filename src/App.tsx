@@ -163,13 +163,15 @@ export default function App() {
     return () => { viewer.destroy(); osdRef.current = null; };
   }, []);
 
-  // Fetch permits
+  // Fetch permits — clear immediately on daysBack change so stale data doesn't linger
   useEffect(() => {
+    setPermits([]);
     async function load() {
       setLoading(true);
       setError(null);
       try {
         const data = await fetchPermits(filters.daysBack);
+        console.log(`[permits] daysBack=${filters.daysBack} → ${data.length} permits`);
         setPermits(data);
       } catch (e) {
         setError('Failed to load permit data.');
