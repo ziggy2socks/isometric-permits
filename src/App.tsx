@@ -220,7 +220,7 @@ export default function App() {
   const [tooltip, setTooltip] = useState<{ permit: Permit; x: number; y: number } | null>(null);
   const [drawerPermit, setDrawerPermit] = useState<Permit | null>(null);
   const [dziLoaded, setDziLoaded] = useState(false);
-  const [overlayOn, setOverlayOn] = useState(false);
+  const [overlayOn, setOverlayOn] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [tickerOpen, setTickerOpen] = useState(true);
 
@@ -260,12 +260,9 @@ export default function App() {
     });
     viewer.addHandler('open', () => {
       setDziLoaded(true);
-      (window as any).__osd = viewer;
-      // Initialize neighborhood labels after tiles open
       labelsRef.current = new NeighborhoodLabels(viewer);
     });
     osdRef.current = viewer;
-    (window as any).__osd = viewer;
     return () => {
       labelsRef.current?.destroy();
       labelsRef.current = null;
@@ -282,7 +279,6 @@ export default function App() {
       setError(null);
       try {
         const data = await fetchPermits(filters.daysBack);
-        console.log(`[permits] daysBack=${filters.daysBack} → ${data.length} permits`);
         setPermits(data);
       } catch (e) {
         setError('Failed to load permit data.');
@@ -304,7 +300,6 @@ export default function App() {
     overlayMarkersRef.current.clear();
     if (!overlayOn) return;
 
-    let placed = 0;
     filteredPermits.forEach((permit, idx) => {
       const lat = parseFloat(permit.latitude ?? '');
       const lng = parseFloat(permit.longitude ?? '');
@@ -358,9 +353,7 @@ export default function App() {
 
       const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${idx}`;
       overlayMarkersRef.current.set(key, el);
-      placed++;
     });
-    console.log(`Placed ${placed} markers`);
   }, [filteredPermits, overlayOn]);
 
   useEffect(() => { if (dziLoaded) placeMarkers(); }, [dziLoaded, placeMarkers]);
@@ -378,7 +371,7 @@ export default function App() {
 
     viewer.viewport.panTo(new OpenSeadragon.Point(targetVpX, targetVpY));
     viewer.viewport.zoomTo(viewer.viewport.getZoom() > 4 ? viewer.viewport.getZoom() : 6);
-  }, [drawerPermit]);
+  }, []);
 
   const toggleJobType = (jt: string) => setFilters(prev => {
     const next = new Set(prev.jobTypes);

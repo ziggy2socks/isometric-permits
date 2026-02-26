@@ -68,7 +68,6 @@ export class NeighborhoodLabels {
     viewer.element.appendChild(this.container);
 
     this.buildLabels();
-    console.log(`[labels] built: ${this.labels.filter(l=>l.tier==='borough').length} borough, ${this.labels.filter(l=>l.tier==='major').length} major, ${this.labels.filter(l=>l.tier==='nta').length} NTA`);
 
     // Reposition on every viewport update
     viewer.addHandler('update-viewport', () => this.draw());
@@ -128,7 +127,6 @@ export class NeighborhoodLabels {
 
     if (tier === this.currentTier) return;
     this.currentTier = tier;
-    console.log(`[labels] zoom=${zoom.toFixed(2)} → tier ${tier}`);
 
     for (const l of this.labels) {
       const show =

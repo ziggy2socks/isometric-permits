@@ -63,8 +63,6 @@ export interface Permit {
   longitude?: string;
 }
 
-export type JobType = 'NB' | 'DM' | 'A1' | 'OTHER';
-
 export interface FilterState {
   jobTypes: Set<string>;
   boroughs: Set<string>;
