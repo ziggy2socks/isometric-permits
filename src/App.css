@@ -190,9 +190,9 @@ html, body, #root {
 /* ── Live Ticker ── */
 .ticker-list {
   flex: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--panel-border) transparent;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .ticker-empty {
@@ -204,20 +204,44 @@ html, body, #root {
 
 .ticker-row {
   display: grid;
-  grid-template-columns: 18px 26px 1fr 52px;
+  grid-template-columns: 10px 26px 1fr 46px;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 6px 14px;
   cursor: pointer;
   border-bottom: 1px solid rgba(0, 200, 255, 0.04);
-  transition: background 0.1s;
+  transition: background 0.15s, opacity 0.3s;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.ticker-row--active {
+  opacity: 1;
+  background: rgba(0, 200, 255, 0.04);
+  border-left: 2px solid var(--accent);
+}
+
+.ticker-row--flash {
+  animation: ticker-flash 0.5s ease-out;
+}
+
+@keyframes ticker-flash {
+  0%   { background: rgba(0, 200, 255, 0.18); }
+  100% { background: transparent; }
 }
 
 .ticker-row:hover {
+  opacity: 1;
   background: rgba(0, 200, 255, 0.06);
 }
 
-.ticker-emoji { font-size: 11px; }
+.ticker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 4px currentColor;
+}
 
 .ticker-type {
   font-size: 10px;
@@ -237,6 +261,16 @@ html, body, #root {
   font-size: 9px;
   color: var(--text-muted);
   text-align: right;
+}
+
+.ticker-counter {
+  padding: 5px 14px;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-align: right;
+  border-top: 1px solid var(--panel-border);
+  margin-top: auto;
 }
 
 /* ── Sidebar footer ── */

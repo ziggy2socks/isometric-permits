@@ -216,12 +216,49 @@ export default function App() {
     return { ...prev, boroughs: next };
   });
 
-  const recentPermits = [...filteredPermits]
+  // All filtered permits sorted newest-first — ticker cycles through all of them
+  const sortedPermits = [...filteredPermits]
     .sort((a, b) =>
       new Date(b.issued_date ?? b.approved_date ?? '').getTime() -
       new Date(a.issued_date ?? a.approved_date ?? '').getTime()
-    )
-    .slice(0, 30);
+    );
+
+  // Auto-scrolling ticker state
+  const tickerRef = useRef<HTMLDivElement>(null);
+  const [tickerIndex, setTickerIndex] = useState(0);
+  const [tickerFlash, setTickerFlash] = useState<number | null>(null);
+  const tickerPausedRef = useRef(false);
+
+  useEffect(() => {
+    if (!tickerOpen || sortedPermits.length === 0) return;
+    const interval = setInterval(() => {
+      if (tickerPausedRef.current) return;
+      setTickerIndex(i => {
+        const next = (i + 1) % sortedPermits.length;
+        setTickerFlash(next);
+        setTimeout(() => setTickerFlash(null), 600);
+        // Scroll the ticker container
+        const el = tickerRef.current;
+        if (el) {
+          const rows = el.querySelectorAll('.ticker-row');
+          const row = rows[next % rows.length] as HTMLElement;
+          if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        return next;
+      });
+    }, 2200);
+    return () => clearInterval(interval);
+  }, [tickerOpen, sortedPermits.length]);
+
+  // Visible window: show 8 rows centered around current index
+  const TICKER_WINDOW = 8;
+  const tickerPermits = sortedPermits.length === 0 ? [] : (() => {
+    const result = [];
+    for (let i = 0; i < Math.min(TICKER_WINDOW, sortedPermits.length); i++) {
+      result.push({ permit: sortedPermits[(tickerIndex + i) % sortedPermits.length], slot: i });
+    }
+    return result;
+  })();
 
   return (
     <div className="app">
@@ -326,17 +363,22 @@ export default function App() {
             <span className="section-caret">{tickerOpen ? '▾' : '▸'}</span>
           </button>
           {tickerOpen && (
-            <div className="ticker-list">
-              {recentPermits.length === 0 && (
+            <div
+              className="ticker-list"
+              ref={tickerRef}
+              onMouseEnter={() => { tickerPausedRef.current = true; }}
+              onMouseLeave={() => { tickerPausedRef.current = false; }}
+            >
+              {sortedPermits.length === 0 && (
                 <div className="ticker-empty">No permits match filters</div>
               )}
-              {recentPermits.map((p, i) => (
+              {tickerPermits.map(({ permit: p, slot }) => (
                 <div
-                  key={`${p.job_filing_number}-${i}`}
-                  className="ticker-row"
-                  onClick={() => flyToPermit(p)}
+                  key={`${p.job_filing_number}-${slot}`}
+                  className={`ticker-row ${slot === 0 ? 'ticker-row--active' : ''} ${tickerFlash === (tickerIndex + slot) % sortedPermits.length ? 'ticker-row--flash' : ''}`}
+                  onClick={() => { flyToPermit(p); }}
                 >
-                  <span className="ticker-emoji">{getJobEmoji(p.job_type ?? '')}</span>
+                  <span className="ticker-dot" style={{ background: getJobColor(p.job_type ?? '') }} />
                   <span className="ticker-type" style={{ color: getJobColor(p.job_type ?? '') }}>
                     {p.job_type}
                   </span>
@@ -346,6 +388,11 @@ export default function App() {
                   </span>
                 </div>
               ))}
+              {sortedPermits.length > 0 && (
+                <div className="ticker-counter">
+                  {tickerIndex + 1} / {sortedPermits.length}
+                </div>
+              )}
             </div>
           )}
         </div>
