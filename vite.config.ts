@@ -16,6 +16,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/permits/, '/resource/rbx6-tga4.json'),
       },
+      '/api/jobs': {
+        target: 'https://data.cityofnewyork.us',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/jobs/, '/resource/w9ak-ipjd.json'),
+      },
       // Proxy isometric NYC tiles (DZI xml + tile images) to avoid CORS
       '/dzi': {
         target: 'https://isometric-nyc-tiles.cannoneyed.com',

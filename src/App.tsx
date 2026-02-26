@@ -303,7 +303,7 @@ export default function App() {
               <div className="filter-group">
                 <div className="filter-label">DATE RANGE</div>
                 <div className="chips">
-                  {[7, 30, 90].map(d => (
+                  {[1, 7, 30, 90].map(d => (
                     <button
                       key={d}
                       className={`chip ${filters.daysBack === d ? 'active' : ''}`}
