@@ -352,12 +352,7 @@ export default function App() {
     if (isNaN(lat) || isNaN(lng)) return;
     const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
 
-    // Offset pan target so permit lands in center of visible map area
-    // Panels occupy left side: sidebar (260px) + drawer (280px when open) = up to 540px
-    // Convert pixel offset to OSD viewport units (viewport width = 1.0 across full window)
-    const panelWidth = drawerPermit ? 540 : 260;
-    const vpOffset = (panelWidth / 2) / window.innerWidth;
-    const targetVpX = imgX / IMAGE_DIMS.width + vpOffset;
+    const targetVpX = imgX / IMAGE_DIMS.width;
     const targetVpY = imgY / IMAGE_DIMS.width;
 
     viewer.viewport.panTo(new OpenSeadragon.Point(targetVpX, targetVpY));
