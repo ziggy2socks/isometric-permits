@@ -23,17 +23,21 @@ export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
   cutoff.setDate(cutoff.getDate() - daysBack);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
+  // Scale limit by date range — 1d ~400, 7d ~3500, 30d ~12k, 90d ~36k
+  // Cap at 5000 for performance; prioritize recency (ORDER BY DESC)
+  const limit = daysBack <= 1 ? 500 : daysBack <= 7 ? 2000 : 5000;
+
   // Fetch work-type permits (GC, PL, etc.)
   const workParams = new URLSearchParams({
     '$order': 'issued_date DESC',
-    '$limit': '1000',
+    '$limit': String(limit),
     '$where': `issued_date >= '${cutoffStr}' AND latitude IS NOT NULL AND longitude IS NOT NULL`,
   });
 
   // Fetch NB + Full Demolition job filings
   const jobParams = new URLSearchParams({
     '$order': 'approved_date DESC',
-    '$limit': '500',
+    '$limit': String(Math.round(limit * 0.1)), // NB+DM are ~10% of total
     '$where': `job_type IN('New Building', 'Full Demolition') AND latitude IS NOT NULL AND approved_date >= '${cutoffStr}'`,
   });
 

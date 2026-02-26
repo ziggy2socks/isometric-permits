@@ -303,13 +303,14 @@ export default function App() {
               <div className="filter-group">
                 <div className="filter-label">DATE RANGE</div>
                 <div className="chips">
-                  {[1, 7, 30, 90].map(d => (
+                  {([1, 7, 30, 90] as const).map(d => (
                     <button
                       key={d}
                       className={`chip ${filters.daysBack === d ? 'active' : ''}`}
                       onClick={() => setFilters(prev => ({ ...prev, daysBack: d }))}
+                      title={d === 1 ? 'Data updates ~24h delayed' : undefined}
                     >
-                      {d}d
+                      {d === 1 ? '24h' : `${d}d`}
                     </button>
                   ))}
                 </div>
