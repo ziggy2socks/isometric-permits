@@ -587,7 +587,7 @@ export default function App() {
 
         <PermitChart permits={filteredPermits} />
 
-        <div className="sidebar-footer">permit-pulse · isometric.nyc overlay</div>
+        <div className="sidebar-footer">permitpulse.nyc · isometric.nyc overlay</div>
       </div>
 
       {/* ── Permit detail drawer ── */}
@@ -616,7 +616,7 @@ export default function App() {
               </div>
               <div className="info-links">
                 <a href="https://github.com/ziggy2socks/isometric-permits" target="_blank" rel="noopener noreferrer">★ GitHub</a>
-                <a href="https://data.cityofnewyork.us/resource/rbx6-tga4.json" target="_blank" rel="noopener noreferrer">NYC Open Data</a>
+                <a href="https://opendata.cityofnewyork.us" target="_blank" rel="noopener noreferrer">NYC Open Data</a>
                 <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>
               </div>
               <p className="info-note">Data updates daily via NYC Open Data · ~24–48h lag</p>

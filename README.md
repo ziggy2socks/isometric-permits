@@ -1,6 +1,6 @@
 # NYC Permit Pulse
 
-**A live NYC DOB permit overlay for [isometric.nyc](https://isometric.nyc).**
+**[permitpulse.nyc](https://permitpulse.nyc) · A live NYC DOB permit overlay for [isometric.nyc](https://isometric.nyc).**
 
 Built as an open-source add-on to [@cannoneyed](https://github.com/cannoneyed)'s pixel-art isometric map of New York City. Plots active building permits directly onto the illustration, with neighborhood labels, real-time filtering, and permit detail drill-down.
 
