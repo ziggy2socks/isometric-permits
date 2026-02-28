@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import OpenSeadragon from 'openseadragon';
 import type { Permit, FilterState } from './types';
 import { latlngToImagePx, IMAGE_DIMS } from './coordinates';
@@ -215,6 +215,7 @@ export default function App() {
   const osdRef = useRef<OpenSeadragon.Viewer | null>(null);
   const overlayMarkersRef = useRef<Map<string, HTMLElement>>(new Map());
   const labelsRef = useRef<NeighborhoodLabels | null>(null);
+  const markerRafRef = useRef<number | null>(null);
 
   const [permits, setPermits] = useState<Permit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -232,13 +233,13 @@ export default function App() {
     daysBack: 1,
   });
 
-  const filteredPermits = permits.filter(p => {
+  const filteredPermits = useMemo(() => permits.filter(p => {
     const jt = p.job_type?.toUpperCase() ?? 'OTHER';
     const borough = p.borough?.toUpperCase() ?? '';
     const jobTypeMatch = filters.jobTypes.has(jt) || (!ALL_JOB_TYPES.includes(jt) && filters.jobTypes.has('OTHER'));
     const boroughMatch = filters.boroughs.has(borough);
     return jobTypeMatch && boroughMatch;
-  });
+  }), [permits, filters.jobTypes, filters.boroughs]);
 
   // Initialize OpenSeadragon
   useEffect(() => {
@@ -329,6 +330,12 @@ export default function App() {
       });
     });
 
+    // Cancel any in-flight chunk loop from a previous render
+    if (markerRafRef.current !== null) {
+      cancelAnimationFrame(markerRafRef.current);
+      markerRafRef.current = null;
+    }
+
     // Add markers in chunks of 200 per frame to avoid blocking the main thread
     const CHUNK = 200;
     let i = 0;
@@ -366,9 +373,13 @@ export default function App() {
         });
         overlayMarkersRef.current.set(key, el);
       }
-      if (i < entries.length) requestAnimationFrame(addChunk);
+      if (i < entries.length) {
+        markerRafRef.current = requestAnimationFrame(addChunk);
+      } else {
+        markerRafRef.current = null;
+      }
     }
-    requestAnimationFrame(addChunk);
+    markerRafRef.current = requestAnimationFrame(addChunk);
   }, [filteredPermits, overlayOn]);
 
   useEffect(() => { if (dziLoaded) placeMarkers(); }, [dziLoaded, placeMarkers]);
