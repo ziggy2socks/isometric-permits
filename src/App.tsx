@@ -190,6 +190,31 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
           <span className="drawer-meta-item">CB: {permit.community_board}</span>
         )}
       </div>
+
+      {/* External links */}
+      <div className="drawer-divider" />
+      <div className="drawer-links">
+        {permit.bin && (
+          <a className="drawer-link" href={`https://a810-bisweb.nyc.gov/bisweb/PropertyProfileOverviewServlet?bin=${permit.bin}`} target="_blank" rel="noopener noreferrer">
+            🏛 DOB BIS
+          </a>
+        )}
+        {permit.bbl && (
+          <a className="drawer-link" href={`https://zola.planning.nyc.gov/l/lot/${permit.bbl.slice(0,1)}/${permit.bbl.slice(1,6)}/${permit.bbl.slice(6)}`} target="_blank" rel="noopener noreferrer">
+            🗺 ZoLa
+          </a>
+        )}
+        {permit.latitude && permit.longitude && (
+          <a className="drawer-link" href={`https://www.google.com/maps?q=${permit.latitude},${permit.longitude}`} target="_blank" rel="noopener noreferrer">
+            📍 Maps
+          </a>
+        )}
+        {permit.latitude && permit.longitude && (
+          <a className="drawer-link" href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${permit.latitude},${permit.longitude}`} target="_blank" rel="noopener noreferrer">
+            🚶 Street View
+          </a>
+        )}
+      </div>
     </div>
   );
 }

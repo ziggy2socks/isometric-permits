@@ -657,3 +657,34 @@ html, body, #root {
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.08em;
 }
+
+/* ── Drawer external links ── */
+.drawer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px 14px;
+}
+
+.drawer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.drawer-link:hover {
+  border-color: var(--drawer-color, var(--cyan));
+  color: var(--drawer-color, var(--cyan));
+  background: rgba(255,255,255,0.08);
+}

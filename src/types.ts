@@ -25,6 +25,7 @@ export interface Permit {
   zip_code?: string;
   block?: string;
   lot?: string;
+  bbl?: string;
   community_board?: string;
   nta?: string;               // neighborhood name (e.g. "Fort Greene")
   council_district?: string;
