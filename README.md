@@ -4,7 +4,7 @@
 
 Built as an open-source add-on to [@cannoneyed](https://github.com/cannoneyed)'s pixel-art isometric map of New York City. Plots active building permits directly onto the illustration, with neighborhood labels, real-time filtering, and permit detail drill-down.
 
-![NYC Permit Pulse screenshot](https://raw.githubusercontent.com/yourusername/isometric-permits/main/public/screenshot.png)
+![NYC Permit Pulse screenshot](https://raw.githubusercontent.com/ziggy2socks/isometric-permits/main/public/screenshot.jpg)
 
 ---
 
