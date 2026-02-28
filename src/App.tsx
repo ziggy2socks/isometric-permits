@@ -251,6 +251,7 @@ export default function App() {
   const [overlayOn, setOverlayOn] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [tickerOpen, setTickerOpen] = useState(true);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
@@ -492,12 +493,15 @@ export default function App() {
         <div className="sidebar-header">
           <div className="sidebar-title-row">
             <span className="sidebar-title">NYC PERMIT PULSE</span>
-            <button
-              className={`overlay-toggle ${overlayOn ? 'on' : 'off'}`}
-              onClick={() => setOverlayOn(v => !v)}
-            >
-              {overlayOn ? 'ON' : 'OFF'}
-            </button>
+            <div className="sidebar-title-actions">
+              <button className="info-btn" onClick={() => setInfoOpen(true)} title="About">?</button>
+              <button
+                className={`overlay-toggle ${overlayOn ? 'on' : 'off'}`}
+                onClick={() => setOverlayOn(v => !v)}
+              >
+                {overlayOn ? 'ON' : 'OFF'}
+              </button>
+            </div>
           </div>
           <div className="sidebar-meta">
             {loading ? '…' : `${filteredPermits.length} permits`}
@@ -589,6 +593,36 @@ export default function App() {
       {/* ── Permit detail drawer ── */}
       {drawerPermit && (
         <PermitDrawer permit={drawerPermit} onClose={() => setDrawerPermit(null)} />
+      )}
+
+      {/* ── Info modal ── */}
+      {infoOpen && (
+        <div className="info-backdrop" onClick={() => setInfoOpen(false)}>
+          <div className="info-modal" onClick={e => e.stopPropagation()}>
+            <div className="info-header">
+              <span className="info-title">NYC PERMIT PULSE</span>
+              <button className="info-close" onClick={() => setInfoOpen(false)}>✕</button>
+            </div>
+            <div className="info-body">
+              <p>A live overlay of NYC Department of Buildings permit activity on the isometric pixel-art map by <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>.</p>
+              <p>Each dot represents an active permit — color-coded by type. Click any dot to see the full filing details, or use the sidebar to filter by permit type, borough, and date range.</p>
+              <div className="info-legend">
+                {['NB','DM','GC','PL','ME','SOL','SHD','SCF'].map(jt => (
+                  <div key={jt} className="info-legend-row">
+                    <span className="info-legend-dot" style={{ background: getJobColor(jt) }} />
+                    <span>{getJobLabel(jt)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="info-links">
+                <a href="https://github.com/ziggy2socks/isometric-permits" target="_blank" rel="noopener noreferrer">★ GitHub</a>
+                <a href="https://data.cityofnewyork.us/resource/rbx6-tga4.json" target="_blank" rel="noopener noreferrer">NYC Open Data</a>
+                <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>
+              </div>
+              <p className="info-note">Data updates daily via NYC Open Data · ~24–48h lag</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Hover tooltip (only when drawer is closed) */}
