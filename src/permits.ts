@@ -10,13 +10,9 @@ import type { Permit } from './types';
 //    Job-level filings: New Building, Full Demolition, Alteration.
 //    We pull only NB + DM from here.
 
-const PERMITS_BASE = import.meta.env.DEV
-  ? '/api/permits'
-  : 'https://data.cityofnewyork.us/resource/rbx6-tga4.json';
-
-const JOBS_BASE = import.meta.env.DEV
-  ? '/api/jobs'
-  : 'https://data.cityofnewyork.us/resource/w9ak-ipjd.json';
+// Always use proxy paths — Vite handles in dev, Vercel rewrites handle in prod.
+const PERMITS_BASE = '/api/permits';
+const JOBS_BASE = '/api/jobs';
 
 // Cache the latest dataset date so we don't fetch it on every filter change
 let _latestDateCache: { date: string; fetchedAt: number } | null = null;

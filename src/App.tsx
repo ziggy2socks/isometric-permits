@@ -15,9 +15,9 @@ import {
 import { NeighborhoodLabels } from './NeighborhoodLabels';
 import './App.css';
 
-const TILE_BASE = import.meta.env.DEV
-  ? '/dzi/tiles_files'
-  : 'https://isometric-nyc-tiles.cannoneyed.com/dzi/tiles_files';
+// Always use the proxy path — in dev Vite proxies it, in prod Vercel rewrites handle it.
+// Direct requests to isometric-nyc-tiles.cannoneyed.com are CORS-blocked to cannoneyed.com only.
+const TILE_BASE = '/dzi/tiles_files';
 const DZI_DIMENSIONS = { width: 123904, height: 100864 };
 const MAX_LEVEL = 8;
 const TILE_SIZE = 512;
