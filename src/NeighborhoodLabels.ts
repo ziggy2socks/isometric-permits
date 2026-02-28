@@ -62,7 +62,7 @@ export class NeighborhoodLabels {
       inset: 0;
       pointer-events: none;
       overflow: hidden;
-      z-index: 200;
+      z-index: 80;
     `;
     // Insert into OSD's element (the viewer container), above everything
     viewer.element.appendChild(this.container);
