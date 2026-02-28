@@ -289,6 +289,10 @@ export default function App() {
     viewer.addHandler('open', () => {
       setDziLoaded(true);
       labelsRef.current = new NeighborhoodLabels(viewer);
+      // Start zoomed into Midtown Manhattan (Empire State Building area)
+      // vpX/vpY: seed pixel (45059, 43479) / image width (123904)
+      viewer.viewport.panTo(new OpenSeadragon.Point(0.3637, 0.3509), true);
+      viewer.viewport.zoomTo(3.5, undefined, true);
     });
     osdRef.current = viewer;
     return () => {
