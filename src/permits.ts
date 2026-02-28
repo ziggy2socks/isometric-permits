@@ -18,10 +18,36 @@ const JOBS_BASE = import.meta.env.DEV
   ? '/api/jobs'
   : 'https://data.cityofnewyork.us/resource/w9ak-ipjd.json';
 
+// Cache the latest dataset date so we don't fetch it on every filter change
+let _latestDateCache: { date: string; fetchedAt: number } | null = null;
+
+async function getLatestDatasetDate(): Promise<Date> {
+  const now = Date.now();
+  // Cache for 10 minutes
+  if (_latestDateCache && now - _latestDateCache.fetchedAt < 10 * 60 * 1000) {
+    return new Date(_latestDateCache.date);
+  }
+  try {
+    const res = await fetch(`${PERMITS_BASE}?$select=max(issued_date)`);
+    const data = await res.json();
+    const dateStr = data[0]?.max_issued_date ?? data[0]?.max_issued_date;
+    if (dateStr) {
+      _latestDateCache = { date: dateStr, fetchedAt: now };
+      return new Date(dateStr);
+    }
+  } catch (_) { /* fall through to default */ }
+  // Fallback: assume 2 days behind
+  const d = new Date();
+  d.setDate(d.getDate() - 2);
+  return d;
+}
+
 export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
-  const cutoff = new Date();
-  // Dataset lags ~24h — add 1 extra day so "24h" actually catches yesterday's data
-  cutoff.setDate(cutoff.getDate() - daysBack - 1);
+  // Use actual latest dataset date rather than assuming N days behind.
+  // The DOB NOW dataset sometimes lags 2-3 days, not just 1.
+  const latestDate = await getLatestDatasetDate();
+  const cutoff = new Date(latestDate);
+  cutoff.setDate(cutoff.getDate() - (daysBack - 1));
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
   // Scale limit by date range — 1d ~400, 7d ~3500, 30d ~12k
@@ -36,6 +62,7 @@ export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
     `$where=issued_date >= '${cutoffStr}' AND latitude IS NOT NULL AND longitude IS NOT NULL`,
   ].map(p => p.replace(/ /g, '+')).join('&');
 
+  // Jobs use approved_date — use same cutoff
   const nbLimit = Math.max(50, Math.round(limit * 0.1));
   const jobQuery = [
     `$order=approved_date DESC`,
