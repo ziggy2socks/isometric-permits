@@ -7,9 +7,41 @@
     <title>NYC Permit Pulse</title>
     <style>
       html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0a0c14; overflow: hidden; }
+
+      /* Mobile overlay — CSS only, zero JS, doesn't touch the app */
+      #mobile-wall {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: #0a0c14;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 40px 32px;
+        text-align: center;
+        font-family: 'JetBrains Mono', 'Fira Mono', ui-monospace, monospace;
+      }
+      #mobile-wall .mw-emoji  { font-size: 52px; line-height: 1; }
+      #mobile-wall .mw-title  { font-size: 13px; font-weight: 700; letter-spacing: 0.2em; color: #00ccff; text-transform: uppercase; }
+      #mobile-wall .mw-msg    { font-size: 13px; color: #556688; line-height: 1.7; max-width: 280px; }
+      #mobile-wall .mw-link   { font-size: 11px; color: #ffe600; text-decoration: none; letter-spacing: 0.08em; border: 1px solid rgba(255,230,0,0.3); padding: 8px 18px; border-radius: 4px; }
+      #mobile-wall .mw-link:hover { color: #fff; border-color: #fff; }
+
+      @media (max-width: 768px) {
+        #mobile-wall { display: flex; }
+        #root { display: none; }
+      }
     </style>
   </head>
   <body>
+    <div id="mobile-wall">
+      <div class="mw-emoji">🏗</div>
+      <div class="mw-title">NYC Permit Pulse</div>
+      <div class="mw-msg">This experience is designed for desktop. Pull it up on a laptop or desktop to explore live NYC building permits on the isometric map.</div>
+      <a class="mw-link" href="https://github.com/ziggy2socks/isometric-permits">★ GitHub</a>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
