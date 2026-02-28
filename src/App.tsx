@@ -205,7 +205,7 @@ function computeOpacities(permits: Permit[]): Map<Permit, number> {
   const map = new Map<Permit, number>();
   permits.forEach((p, i) => {
     const t = times[i];
-    map.set(p, isNaN(t) || max === min ? 1 : 0.25 + 0.75 * ((t - min) / (max - min)));
+    map.set(p, isNaN(t) || max === min ? 1 : 0.5 + 0.5 * ((t - min) / (max - min)));
   });
   return map;
 }

@@ -350,7 +350,7 @@ html, body, #root {
   height: 10px;
   border-radius: 50%;
   background: var(--color, #00ccff);
-  box-shadow: 0 0 6px var(--color, #00ccff), 0 0 12px var(--color, #00ccff);
+  /* no glow/blur — sharp solid dots */
   cursor: pointer;
   transition: transform 0.1s;
   will-change: transform;
