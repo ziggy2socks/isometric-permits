@@ -4,6 +4,8 @@
   --panel-border: rgba(0, 200, 255, 0.15);
   --text: #e0e8ff;
   --text-muted: #556688;
+  --cyan: #00ccff;
+  --yellow: #ffe600;
   --accent: #00ccff;
   --font: 'Courier New', Courier, monospace;
   --sidebar-w: 260px;
@@ -815,11 +817,11 @@ html, body, #root {
 
 .info-links a {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--yellow);
   text-decoration: none;
   letter-spacing: 0.04em;
 }
-.info-links a:hover { color: var(--cyan); }
+.info-links a:hover { color: #fff; }
 
 .info-note {
   font-size: 10px !important;
