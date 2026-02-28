@@ -144,25 +144,25 @@ export const WORK_TYPE_LABELS: Record<string, string> = {
 };
 
 export const WORK_TYPE_COLORS: Record<string, string> = {
-  NB:  '#00ff88',
-  DM:  '#ff3333',
-  GC:  '#ff8800',
-  PL:  '#7777ff',
-  ME:  '#00ccff',
-  SOL: '#ffff00',
-  SHD: '#aaaaaa',
-  SCF: '#bbbbbb',
-  FNC: '#999999',
-  SG:  '#ff77ff',
-  FND: '#cc8844',
-  STR: '#ff9944',
-  BLR: '#ff6644',
-  SPR: '#44ccff',
-  EW:  '#88ff44',
-  ANT: '#cc44ff',
-  CC:  '#888888',
-  STP: '#4488ff',
-  OTH: '#666666',
+  NB:  '#00ff88',  // bright green      — new building
+  DM:  '#ff2222',  // red               — demolition
+  GC:  '#ff8800',  // orange            — general construction
+  PL:  '#4466ff',  // blue              — plumbing
+  ME:  '#00ccff',  // cyan              — mechanical
+  SOL: '#ffe600',  // yellow            — solar
+  SHD: '#cc44ff',  // purple            — sidewalk shed
+  SCF: '#ff44aa',  // pink              — scaffold
+  FNC: '#44ffdd',  // teal              — construction fence
+  SG:  '#ffffff',  // white             — sign
+  FND: '#a0522d',  // brown             — foundation
+  STR: '#ff6600',  // deep orange       — structural (distinct from GC orange)
+  BLR: '#ff0066',  // hot pink-red      — boiler
+  SPR: '#00aaff',  // sky blue          — sprinkler
+  EW:  '#88ff00',  // yellow-green      — earth work
+  ANT: '#dd00ff',  // violet            — antenna
+  CC:  '#ffaa00',  // amber             — curb cut
+  STP: '#0055ff',  // deep blue         — standpipe
+  OTH: '#888888',  // grey              — other
 };
 
 export const WORK_TYPE_EMOJIS: Record<string, string> = {
