@@ -194,18 +194,20 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
   );
 }
 
-// Compute recency opacity: newest = 1.0, oldest = 0.25
-function getRecencyOpacity(permit: Permit, permits: Permit[]): number {
-  const dateStr = permit.issued_date ?? permit.approved_date;
-  if (!dateStr || permits.length <= 1) return 1;
-  const t = new Date(dateStr).getTime();
-  const times = permits
-    .map(p => new Date(p.issued_date ?? p.approved_date ?? '').getTime())
-    .filter(n => !isNaN(n));
-  const min = Math.min(...times);
-  const max = Math.max(...times);
-  if (max === min) return 1;
-  return 0.25 + 0.75 * ((t - min) / (max - min));
+// Pre-compute recency opacities for all permits in O(n)
+function computeOpacities(permits: Permit[]): Map<Permit, number> {
+  const times = permits.map(p =>
+    new Date(p.issued_date ?? p.approved_date ?? '').getTime()
+  );
+  const valid = times.filter(t => !isNaN(t));
+  const min = Math.min(...valid);
+  const max = Math.max(...valid);
+  const map = new Map<Permit, number>();
+  permits.forEach((p, i) => {
+    const t = times[i];
+    map.set(p, isNaN(t) || max === min ? 1 : 0.25 + 0.75 * ((t - min) / (max - min)));
+  });
+  return map;
 }
 
 export default function App() {
@@ -298,62 +300,75 @@ export default function App() {
     if (!viewer) return;
     viewer.clearOverlays();
     overlayMarkersRef.current.clear();
-    if (!overlayOn) return;
+    if (!overlayOn || filteredPermits.length === 0) return;
 
+    // Pre-compute opacities in O(n) — avoids O(n²) min/max scan per marker
+    const opacities = computeOpacities(filteredPermits);
+
+    // Build all valid marker entries first
+    const entries: Array<{ el: HTMLDivElement; vpX: number; vpY: number; permit: Permit; key: string; opacity: number }> = [];
     filteredPermits.forEach((permit, idx) => {
       const lat = parseFloat(permit.latitude ?? '');
       const lng = parseFloat(permit.longitude ?? '');
       if (isNaN(lat) || isNaN(lng)) return;
-
       const { x: imageX, y: imageY } = latlngToImagePx(lat, lng);
       if (imageX < 0 || imageX > IMAGE_DIMS.width || imageY < 0 || imageY > IMAGE_DIMS.height) return;
 
-      const vpX = imageX / IMAGE_DIMS.width;
-      const vpY = imageY / IMAGE_DIMS.width;
-
-      // Recency fade: newer = brighter, older = dimmer
-      const opacity = getRecencyOpacity(permit, filteredPermits);
-
+      const opacity = opacities.get(permit) ?? 1;
       const el = document.createElement('div');
       el.className = 'permit-marker';
+      el.style.cssText = `width:10px;height:10px;opacity:${opacity};pointer-events:auto;`;
       el.style.setProperty('--color', getJobColor(permit.job_type ?? ''));
-      el.style.width = '10px';
-      el.style.height = '10px';
-      el.style.opacity = String(opacity);
-
-      el.style.pointerEvents = 'auto';
-
-      el.addEventListener('mouseenter', (e) => {
-        const rect = (e.target as HTMLElement).getBoundingClientRect();
-        setTooltip({ permit, x: rect.left + rect.width / 2, y: rect.top });
-        el.style.opacity = '1'; // full brightness on hover
-      });
-      el.addEventListener('mouseleave', () => {
-        setTooltip(null);
-        el.style.opacity = String(opacity);
-      });
-      // Use pointerdown + stopImmediatePropagation so OSD's MouseTracker
-      // doesn't intercept the event before our click fires.
-      el.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      });
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        setDrawerPermit(permit);
-      });
-
-      viewer.addOverlay({
-        element: el,
-        location: new OpenSeadragon.Point(vpX, vpY),
-        placement: OpenSeadragon.Placement.CENTER,
-        checkResize: false,
-      });
 
       const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${idx}`;
-      overlayMarkersRef.current.set(key, el);
+      el.dataset.key = key;
+
+      entries.push({
+        el, vpX: imageX / IMAGE_DIMS.width, vpY: imageY / IMAGE_DIMS.width,
+        permit, key, opacity,
+      });
     });
+
+    // Add markers in chunks of 200 per frame to avoid blocking the main thread
+    const CHUNK = 200;
+    let i = 0;
+    function addChunk() {
+      if (!osdRef.current) return; // viewer may have been destroyed
+      const end = Math.min(i + CHUNK, entries.length);
+      for (; i < end; i++) {
+        const { el, vpX, vpY, permit, key, opacity } = entries[i];
+
+        // Attach listeners only once per element
+        el.addEventListener('mouseenter', (e) => {
+          const rect = (e.target as HTMLElement).getBoundingClientRect();
+          setTooltip({ permit, x: rect.left + rect.width / 2, y: rect.top });
+          el.style.opacity = '1';
+        });
+        el.addEventListener('mouseleave', () => {
+          setTooltip(null);
+          el.style.opacity = String(opacity);
+        });
+        el.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+        });
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          setDrawerPermit(permit);
+        });
+
+        osdRef.current.addOverlay({
+          element: el,
+          location: new OpenSeadragon.Point(vpX, vpY),
+          placement: OpenSeadragon.Placement.CENTER,
+          checkResize: false,
+        });
+        overlayMarkersRef.current.set(key, el);
+      }
+      if (i < entries.length) requestAnimationFrame(addChunk);
+    }
+    requestAnimationFrame(addChunk);
   }, [filteredPermits, overlayOn]);
 
   useEffect(() => { if (dziLoaded) placeMarkers(); }, [dziLoaded, placeMarkers]);
