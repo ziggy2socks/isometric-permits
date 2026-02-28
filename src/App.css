@@ -810,18 +810,27 @@ html, body, #root {
 
 .info-links {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 0;
   padding-top: 2px;
 }
 
 .info-links a {
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
+  border: 1px solid var(--panel-border);
+  border-right: none;
   font-size: 11px;
   color: var(--yellow);
   text-decoration: none;
   letter-spacing: 0.04em;
+  transition: background 0.15s, color 0.15s;
 }
-.info-links a:hover { color: #fff; }
+
+.info-links a:first-child { border-radius: 4px 0 0 4px; }
+.info-links a:last-child  { border-radius: 0 4px 4px 0; border-right: 1px solid var(--panel-border); }
+
+.info-links a:hover { background: rgba(255,255,255,0.06); color: #fff; }
 
 .info-note {
   font-size: 10px !important;
