@@ -352,13 +352,15 @@ html, body, #root {
   background: var(--color, #00ccff);
   box-shadow: 0 0 6px var(--color, #00ccff), 0 0 12px var(--color, #00ccff);
   cursor: pointer;
-  animation: pulse 2s ease-in-out infinite;
   transition: transform 0.1s;
+  will-change: transform;
+  contain: layout style;
 }
 
 .permit-marker:hover {
   transform: scale(1.8);
   z-index: 999;
+  animation: pulse 1s ease-in-out infinite;
 }
 
 @keyframes pulse {
