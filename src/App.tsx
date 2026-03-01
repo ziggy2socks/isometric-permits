@@ -547,12 +547,12 @@ export default function App() {
                   {([1, 7, 30] as const).map(d => (
                     <button key={d}
                       className={`chip ${filters.daysBack === d ? 'active' : ''}`}
-                      onClick={() => setFilters(prev => ({ ...prev, daysBack: d }))}
-                      title={d === 1 ? 'Data updates ~24h delayed' : undefined}>
-                      {d === 1 ? '24h' : `${d}d`}
+                      onClick={() => setFilters(prev => ({ ...prev, daysBack: d }))}>
+                      {d === 1 ? 'Latest Day' : d === 7 ? '7 Days' : '30 Days'}
                     </button>
                   ))}
                 </div>
+                <div className="filter-lag-note">⚠ DOB data lags 2–5 days</div>
               </div>
             </div>
           )}
@@ -619,7 +619,7 @@ export default function App() {
                 <a href="https://opendata.cityofnewyork.us" target="_blank" rel="noopener noreferrer">NYC Open Data</a>
                 <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>
               </div>
-              <p className="info-note">Data updates daily via NYC Open Data · ~24–48h lag</p>
+              <p className="info-note">Data sourced from NYC Open Data · DOB publishes with a 2–5 day lag</p>
             </div>
           </div>
         </div>

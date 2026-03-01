@@ -165,6 +165,14 @@ html, body, #root {
   gap: 4px;
 }
 
+.filter-lag-note {
+  font-size: 9px;
+  color: #f59e0b;
+  opacity: 0.75;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
 .chip {
   padding: 3px 7px;
   border: 1px solid var(--panel-border);
