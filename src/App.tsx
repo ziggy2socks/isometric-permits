@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
 import OpenSeadragon from 'openseadragon';
 import type { Permit, FilterState } from './types';
 import { latlngToImagePx, IMAGE_DIMS } from './coordinates';
@@ -219,6 +220,45 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
   );
 }
 
+// ── Virtualized permit list row ──
+type PermitRowData = {
+  sortedPermits: Permit[];
+  selectedPermit: Permit | null;
+  setDrawerPermit: (p: Permit) => void;
+  setSelectedPermit: (p: Permit) => void;
+  flyToPermit: (p: Permit) => void;
+};
+
+function PermitRow({ index, style, data }: ListChildComponentProps<PermitRowData>) {
+  const { sortedPermits, selectedPermit, setDrawerPermit, setSelectedPermit, flyToPermit } = data;
+  const p = sortedPermits[index];
+  const isSelected = selectedPermit
+    ? (p.job_filing_number && p.job_filing_number === selectedPermit.job_filing_number) || p === selectedPermit
+    : false;
+  const color = getJobColor(p.job_type ?? '');
+
+  return (
+    <div
+      style={style}
+      className={`permit-row ${isSelected ? 'permit-row--selected' : ''}`}
+      onClick={() => {
+        setDrawerPermit(p);
+        setSelectedPermit(p);
+        flyToPermit(p);
+      }}
+    >
+      <span className="permit-row-dot" style={{ background: color }} />
+      <div className="permit-row-body">
+        <div className="permit-row-top">
+          <span className="permit-row-type" style={{ color }}>{p.job_type}</span>
+          <span className="permit-row-date">{formatDate(p.issued_date ?? p.approved_date)?.split(',')[0]}</span>
+        </div>
+        <div className="permit-row-addr">{formatAddress(p)}</div>
+      </div>
+    </div>
+  );
+}
+
 // Pre-compute recency opacities for all permits in O(n)
 function computeOpacities(permits: Permit[]): Map<Permit, number> {
   const times = permits.map(p =>
@@ -250,13 +290,15 @@ export default function App() {
   const [dziLoaded, setDziLoaded] = useState(false);
   const [overlayOn, setOverlayOn] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [tickerOpen, setTickerOpen] = useState(true);
+  const [permitsOpen, setPermitsOpen] = useState(true);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
+  const listRef = useRef<List>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
     boroughs: new Set(ALL_BOROUGHS),
-    daysBack: 1,
+    daysBack: 7,
   });
 
   const filteredPermits = useMemo(() => permits.filter(p => {
@@ -393,6 +435,7 @@ export default function App() {
           e.stopPropagation();
           e.stopImmediatePropagation();
           setDrawerPermit(permit);
+          setSelectedPermit(permit);
         });
 
         osdRef.current.addOverlay({
@@ -421,10 +464,8 @@ export default function App() {
     const lng = parseFloat(permit.longitude ?? '');
     if (isNaN(lat) || isNaN(lng)) return;
     const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
-
     const targetVpX = imgX / IMAGE_DIMS.width;
     const targetVpY = imgY / IMAGE_DIMS.width;
-
     viewer.viewport.panTo(new OpenSeadragon.Point(targetVpX, targetVpY));
     viewer.viewport.zoomTo(viewer.viewport.getZoom() > 4 ? viewer.viewport.getZoom() : 6);
   }, []);
@@ -441,39 +482,20 @@ export default function App() {
     return { ...prev, boroughs: next };
   });
 
-  const sortedPermits = [...filteredPermits].sort((a, b) =>
+  const sortedPermits = useMemo(() => [...filteredPermits].sort((a, b) =>
     new Date(b.issued_date ?? b.approved_date ?? '').getTime() -
     new Date(a.issued_date ?? a.approved_date ?? '').getTime()
-  );
+  ), [filteredPermits]);
 
-  // Ticker
-  const tickerRef = useRef<HTMLDivElement>(null);
-  const [tickerIndex, setTickerIndex] = useState(0);
-  const [tickerFlash, setTickerFlash] = useState<number | null>(null);
-  const tickerPausedRef = useRef(false);
-
+  // Scroll virtual list to selected permit
   useEffect(() => {
-    if (!tickerOpen || sortedPermits.length === 0) return;
-    const interval = setInterval(() => {
-      if (tickerPausedRef.current) return;
-      setTickerIndex(i => {
-        const next = (i + 1) % sortedPermits.length;
-        setTickerFlash(next);
-        setTimeout(() => setTickerFlash(null), 600);
-        return next;
-      });
-    }, 2200);
-    return () => clearInterval(interval);
-  }, [tickerOpen, sortedPermits.length]);
-
-  const TICKER_WINDOW = 8;
-  const tickerPermits = sortedPermits.length === 0 ? [] : (() => {
-    const result = [];
-    for (let i = 0; i < Math.min(TICKER_WINDOW, sortedPermits.length); i++) {
-      result.push({ permit: sortedPermits[(tickerIndex + i) % sortedPermits.length], slot: i });
-    }
-    return result;
-  })();
+    if (!selectedPermit || !listRef.current) return;
+    const idx = sortedPermits.findIndex(p =>
+      (p.job_filing_number && p.job_filing_number === selectedPermit.job_filing_number) ||
+      p === selectedPermit
+    );
+    if (idx >= 0) listRef.current.scrollToItem(idx, 'smart');
+  }, [selectedPermit, sortedPermits]);
 
   return (
     <div className="app">
@@ -559,28 +581,25 @@ export default function App() {
         </div>
 
         <div className="sidebar-section sidebar-section--grow">
-          <button className="section-toggle" onClick={() => setTickerOpen(v => !v)}>
-            <span>LIVE TICKER</span>
-            <span className="section-caret">{tickerOpen ? '▾' : '▸'}</span>
+          <button className="section-toggle" onClick={() => setPermitsOpen(v => !v)}>
+            <span>PERMITS <span className="section-count">{sortedPermits.length > 0 ? sortedPermits.length.toLocaleString() : ''}</span></span>
+            <span className="section-caret">{permitsOpen ? '▾' : '▸'}</span>
           </button>
-          {tickerOpen && (
-            <div className="ticker-list" ref={tickerRef}
-              onMouseEnter={() => { tickerPausedRef.current = true; }}
-              onMouseLeave={() => { tickerPausedRef.current = false; }}>
-              {sortedPermits.length === 0 && <div className="ticker-empty">No permits match filters</div>}
-              {tickerPermits.map(({ permit: p, slot }) => (
-                <div key={`${p.job_filing_number}-${slot}`}
-                  className={`ticker-row ${slot === 0 ? 'ticker-row--active' : ''} ${tickerFlash === (tickerIndex + slot) % sortedPermits.length ? 'ticker-row--flash' : ''}`}
-                  onClick={() => { setDrawerPermit(p); flyToPermit(p); }}>
-                  <span className="ticker-dot" style={{ background: getJobColor(p.job_type ?? '') }} />
-                  <span className="ticker-type" style={{ color: getJobColor(p.job_type ?? '') }}>{p.job_type}</span>
-                  <span className="ticker-address">{formatAddress(p)}</span>
-                  <span className="ticker-date">{formatDate(p.issued_date ?? p.approved_date)?.split(',')[0]}</span>
-                </div>
-              ))}
-              {sortedPermits.length > 0 && (
-                <div className="ticker-counter">{tickerIndex + 1} / {sortedPermits.length}</div>
-              )}
+          {permitsOpen && (
+            <div className="permit-list-wrap">
+              {sortedPermits.length === 0
+                ? <div className="permit-list-empty">No permits match filters</div>
+                : <List
+                    ref={listRef}
+                    height={280}
+                    itemCount={sortedPermits.length}
+                    itemSize={48}
+                    width="100%"
+                    itemData={{ sortedPermits, selectedPermit, setDrawerPermit, setSelectedPermit, flyToPermit }}
+                  >
+                    {PermitRow}
+                  </List>
+              }
             </div>
           )}
         </div>

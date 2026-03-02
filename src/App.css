@@ -198,89 +198,93 @@ html, body, #root {
 }
 
 /* ── Live Ticker ── */
-.ticker-list {
+/* ── Permit list (virtualized) ── */
+.permit-list-wrap {
   flex: 1;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-.ticker-empty {
+.permit-list-empty {
   padding: 16px 14px;
   color: var(--text-muted);
   font-size: 10px;
   text-align: center;
 }
 
-.ticker-row {
-  display: grid;
-  grid-template-columns: 10px 26px 1fr 46px;
+.section-count {
+  color: var(--text-muted);
+  font-size: 9px;
+  margin-left: 4px;
+  letter-spacing: 1px;
+}
+
+.permit-row {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 8px;
+  padding: 0 14px;
   cursor: pointer;
   border-bottom: 1px solid rgba(0, 200, 255, 0.04);
-  transition: background 0.15s, opacity 0.3s;
-  opacity: 0.5;
-  flex-shrink: 0;
+  transition: background 0.12s;
+  box-sizing: border-box;
 }
 
-.ticker-row--active {
-  opacity: 1;
-  background: rgba(0, 200, 255, 0.04);
-  border-left: 2px solid var(--accent);
-}
-
-.ticker-row--flash {
-  animation: ticker-flash 0.5s ease-out;
-}
-
-@keyframes ticker-flash {
-  0%   { background: rgba(0, 200, 255, 0.18); }
-  100% { background: transparent; }
-}
-
-.ticker-row:hover {
-  opacity: 1;
+.permit-row:hover {
   background: rgba(0, 200, 255, 0.06);
 }
 
-.ticker-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 4px currentColor;
+.permit-row--selected {
+  background: rgba(0, 200, 255, 0.07);
+  border-left: 2px solid var(--accent);
+  animation: permit-pulse 0.5s ease-out;
 }
 
-.ticker-type {
+@keyframes permit-pulse {
+  0%   { background: rgba(0, 200, 255, 0.22); }
+  100% { background: rgba(0, 200, 255, 0.07); }
+}
+
+.permit-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.permit-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.permit-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.permit-row-type {
   font-size: 10px;
   font-weight: bold;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
-.ticker-address {
+.permit-row-date {
+  font-size: 9px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.permit-row-addr {
   font-size: 10px;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ticker-date {
-  font-size: 9px;
-  color: var(--text-muted);
-  text-align: right;
-}
-
-.ticker-counter {
-  padding: 5px 14px;
-  font-size: 9px;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  text-align: right;
-  border-top: 1px solid var(--panel-border);
-  margin-top: auto;
 }
 
 /* ── Permit breakdown chart ── */
