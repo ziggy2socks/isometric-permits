@@ -408,17 +408,18 @@ export default function App() {
     });
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      if (cancelled) return;
-      const helis = await fetchHelicopters();
-      if (!cancelled) placeHelicopters(helis);
-    }
-    poll();
-    const interval = setInterval(poll, 12000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, [placeHelicopters]);
+  // Helicopter polling — disabled until review, re-enable by uncommenting
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   async function poll() {
+  //     if (cancelled) return;
+  //     const helis = await fetchHelicopters();
+  //     if (!cancelled) placeHelicopters(helis);
+  //   }
+  //   poll();
+  //   const interval = setInterval(poll, 12000);
+  //   return () => { cancelled = true; clearInterval(interval); };
+  // }, [placeHelicopters]);
 
   // Place markers with recency fade
   const placeMarkers = useCallback(() => {
