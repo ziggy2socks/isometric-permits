@@ -497,6 +497,20 @@ export default function App() {
     if (idx >= 0) listRef.current.scrollToItem(idx, 'smart');
   }, [selectedPermit, sortedPermits]);
 
+  // Highlight selected marker dot on map
+  useEffect(() => {
+    // Clear previous selection
+    overlayMarkersRef.current.forEach(el => el.classList.remove('permit-marker--selected'));
+    if (!selectedPermit) return;
+    const key = selectedPermit.job_filing_number
+      ? `job-${selectedPermit.job_filing_number}`
+      : null;
+    if (key) {
+      const el = overlayMarkersRef.current.get(key);
+      if (el) el.classList.add('permit-marker--selected');
+    }
+  }, [selectedPermit]);
+
   return (
     <div className="app">
       <div ref={viewerRef} className="viewer" />

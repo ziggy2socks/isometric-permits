@@ -412,6 +412,23 @@ html, body, #root {
   }
 }
 
+.permit-marker--selected {
+  transform: scale(2);
+  z-index: 998;
+  animation: marker-selected-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes marker-selected-pulse {
+  0%, 100% {
+    transform: scale(2);
+    box-shadow: 0 0 6px 2px var(--color, #00ccff), 0 0 14px 4px var(--color, #00ccff);
+  }
+  50% {
+    transform: scale(2.4);
+    box-shadow: 0 0 12px 4px var(--color, #00ccff), 0 0 28px 8px var(--color, #00ccff);
+  }
+}
+
 /* ── Tooltip ── */
 .tooltip {
   position: fixed;
