@@ -410,8 +410,8 @@ export default function App() {
       markerRafRef.current = null;
     }
 
-    // Add markers in chunks of 200 per frame to avoid blocking the main thread
-    const CHUNK = 200;
+    // Add markers in chunks of 400 per frame to avoid blocking the main thread
+    const CHUNK = 400;
     let i = 0;
     function addChunk() {
       if (!osdRef.current) return; // viewer may have been destroyed

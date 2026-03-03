@@ -67,8 +67,8 @@ export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
   ].map(p => p.replace(/ /g, '+')).join('&');
 
   const [workRes, jobRes] = await Promise.all([
-    fetch(`${PERMITS_BASE}?${workQuery}`),
-    fetch(`${JOBS_BASE}?${jobQuery}`),
+    fetch(`${PERMITS_BASE}?${workQuery}`, { cache: 'no-store' }),
+    fetch(`${JOBS_BASE}?${jobQuery}`, { cache: 'no-store' }),
   ]);
 
   if (!workRes.ok) throw new Error(`Permits API error: ${workRes.status}`);
