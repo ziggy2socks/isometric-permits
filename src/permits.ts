@@ -48,7 +48,7 @@ export async function fetchPermits(daysBack: number = 30): Promise<Permit[]> {
 
   // Scale limit by date range — 1d ~400, 7d ~3500, 30d ~12k
   // 30d capped at 2000 (most recent) — showing 12k markers is unusable
-  const limit = daysBack <= 1 ? 1000 : daysBack <= 7 ? 2000 : 2000;
+  const limit = daysBack <= 1 ? 1000 : daysBack <= 7 ? 2000 : 5000;
 
   // Build query strings manually — URLSearchParams double-encodes '$' as '%24'
   // which breaks the Socrata API (requires literal $order, $where, etc.)
