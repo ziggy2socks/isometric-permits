@@ -294,6 +294,8 @@ export default function App() {
   const [infoOpen, setInfoOpen] = useState(false);
   const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
   const listRef = useRef<List>(null);
+  const permitListWrapRef = useRef<HTMLDivElement>(null);
+  const [permitListHeight, setPermitListHeight] = useState(280);
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
@@ -487,6 +489,19 @@ export default function App() {
     new Date(a.issued_date ?? a.approved_date ?? '').getTime()
   ), [filteredPermits]);
 
+  // Measure permit list container height dynamically
+  useEffect(() => {
+    const el = permitListWrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setPermitListHeight(entry.contentRect.height);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Scroll virtual list to selected permit
   useEffect(() => {
     if (!selectedPermit || !listRef.current) return;
@@ -600,12 +615,12 @@ export default function App() {
             <span className="section-caret">{permitsOpen ? '▾' : '▸'}</span>
           </button>
           {permitsOpen && (
-            <div className="permit-list-wrap">
+            <div className="permit-list-wrap" ref={permitListWrapRef}>
               {sortedPermits.length === 0
                 ? <div className="permit-list-empty">No permits match filters</div>
                 : <List
                     ref={listRef}
-                    height={280}
+                    height={permitListHeight}
                     itemCount={sortedPermits.length}
                     itemSize={48}
                     width="100%"

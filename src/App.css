@@ -202,6 +202,7 @@ html, body, #root {
 .permit-list-wrap {
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* Custom scrollbar for the virtual list */
