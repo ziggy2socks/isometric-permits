@@ -299,7 +299,7 @@ export default function App() {
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
-    boroughs: new Set(ALL_BOROUGHS),
+    boroughs: new Set(['MANHATTAN']),
     daysBack: 7,
   });
 
@@ -595,11 +595,11 @@ export default function App() {
               <div className="filter-group">
                 <div className="filter-label">DATE RANGE</div>
                 <div className="chips">
-                  {([1, 7, 30] as const).map(d => (
+                  {([7, 30] as const).map(d => (
                     <button key={d}
                       className={`chip ${filters.daysBack === d ? 'active' : ''}`}
                       onClick={() => setFilters(prev => ({ ...prev, daysBack: d }))}>
-                      {d === 1 ? 'Latest Day' : d === 7 ? '7 Days' : '30 Days'}
+                      {d === 7 ? '7 Days' : '30 Days'}
                     </button>
                   ))}
                 </div>
@@ -673,8 +673,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Hover tooltip (only when drawer is closed) */}
-      {tooltip && !drawerPermit && (
+      {/* Hover tooltip */}
+      {tooltip && (
         <div className="tooltip" style={{ left: tooltip.x, top: tooltip.y - 8, transform: 'translate(-50%, -100%)' }}>
           <div className="tooltip-type" style={{ color: getJobColor(tooltip.permit.job_type ?? '') }}>
             {getJobEmoji(tooltip.permit.job_type ?? '')} {getJobLabel(tooltip.permit.job_type ?? '')}
