@@ -247,7 +247,7 @@ function PermitRow({ index, style, data }: ListChildComponentProps<PermitRowData
         flyToPermit(p);
       }}
     >
-      <span className="permit-row-dot" style={{ background: color }} />
+      <span className="permit-row-dot" style={{ background: color, color }} />
       <div className="permit-row-body">
         <div className="permit-row-top">
           <span className="permit-row-type" style={{ color }}>{p.job_type}</span>
