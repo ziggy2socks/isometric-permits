@@ -14,6 +14,7 @@ import {
   ALL_BOROUGHS,
 } from './permits';
 import { NeighborhoodLabels } from './NeighborhoodLabels';
+import { fetchHelicopters, type HelicopterState } from './helicopters';
 import './App.css';
 
 // Always use the proxy path — in dev Vite proxies it, in prod Vercel rewrites handle it.
@@ -296,6 +297,7 @@ export default function App() {
   const listRef = useRef<List>(null);
   const permitListWrapRef = useRef<HTMLDivElement>(null);
   const [permitListHeight, setPermitListHeight] = useState(280);
+  const heliOverlaysRef = useRef<Map<string, HTMLElement>>(new Map());
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
@@ -368,6 +370,55 @@ export default function App() {
     const interval = setInterval(load, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [filters.daysBack]);
+
+  // Helicopter live layer
+  const placeHelicopters = useCallback((helis: HelicopterState[]) => {
+    const viewer = osdRef.current;
+    if (!viewer) return;
+    const existing = heliOverlaysRef.current;
+
+    // Remove overlays for helicopters no longer present
+    const activeHexes = new Set(helis.map(h => h.hex));
+    existing.forEach((el, hex) => {
+      if (!activeHexes.has(hex)) {
+        try { viewer.removeOverlay(el); } catch {}
+        existing.delete(hex);
+      }
+    });
+
+    helis.forEach(h => {
+      const { x: imgX, y: imgY } = latlngToImagePx(h.lat, h.lon);
+      if (imgX < 0 || imgX > IMAGE_DIMS.width || imgY < 0 || imgY > IMAGE_DIMS.height) return;
+      const vpX = imgX / IMAGE_DIMS.width;
+      const vpY = imgY / IMAGE_DIMS.width;
+      const point = new OpenSeadragon.Point(vpX, vpY);
+
+      if (existing.has(h.hex)) {
+        // Smoothly animate to new position via CSS transition
+        const el = existing.get(h.hex)!;
+        viewer.updateOverlay(el, point, OpenSeadragon.Placement.CENTER);
+      } else {
+        // Create new overlay
+        const el = document.createElement('div');
+        el.className = 'heli-marker';
+        el.textContent = '🚁';
+        viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
+        existing.set(h.hex, el);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      if (cancelled) return;
+      const helis = await fetchHelicopters();
+      if (!cancelled) placeHelicopters(helis);
+    }
+    poll();
+    const interval = setInterval(poll, 12000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [placeHelicopters]);
 
   // Place markers with recency fade
   const placeMarkers = useCallback(() => {
