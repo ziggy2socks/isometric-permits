@@ -414,12 +414,12 @@ export default function App() {
         positions.set(h.hex, { fromX: curX, fromY: curY, toX, toY, startTime: now, duration: POLL_MS });
         // Update rotation immediately
         const el = existing.get(h.hex)!;
-        el.style.transform = `rotate(${h.track}deg)`;
+        el.style.transform = `rotate(${h.track - 90}deg)`;
       } else {
         const el = document.createElement('div');
         el.className = 'heli-marker';
         el.textContent = '🚁';
-        el.style.transform = `rotate(${h.track}deg)`;
+        el.style.transform = `rotate(${h.track - 90}deg)`;
         const point = new OpenSeadragon.Point(toX, toY);
         viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
         existing.set(h.hex, el);
