@@ -298,6 +298,8 @@ export default function App() {
   const permitListWrapRef = useRef<HTMLDivElement>(null);
   const [permitListHeight, setPermitListHeight] = useState(280);
   const heliOverlaysRef = useRef<Map<string, HTMLElement>>(new Map());
+  const heliPositionsRef = useRef<Map<string, { fromX: number; fromY: number; toX: number; toY: number; startTime: number; duration: number }>>(new Map());
+  const heliRafRef = useRef<number | null>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
@@ -345,6 +347,7 @@ export default function App() {
     return () => {
       labelsRef.current?.destroy();
       labelsRef.current = null;
+      if (heliRafRef.current !== null) { cancelAnimationFrame(heliRafRef.current); heliRafRef.current = null; }
       viewer.destroy();
       osdRef.current = null;
     };
@@ -371,41 +374,69 @@ export default function App() {
     return () => clearInterval(interval);
   }, [filters.daysBack]);
 
-  // Helicopter live layer
+  // Helicopter live layer — smooth interpolation between poll updates
   const placeHelicopters = useCallback((helis: HelicopterState[]) => {
     const viewer = osdRef.current;
     if (!viewer) return;
     const existing = heliOverlaysRef.current;
+    const positions = heliPositionsRef.current;
+    const POLL_MS = 12000; // match poll interval
 
-    // Remove overlays for helicopters no longer present
+    // Remove stale helicopters
     const activeHexes = new Set(helis.map(h => h.hex));
     existing.forEach((el, hex) => {
       if (!activeHexes.has(hex)) {
         try { viewer.removeOverlay(el); } catch {}
         existing.delete(hex);
+        positions.delete(hex);
       }
     });
+
+    const now = performance.now();
 
     helis.forEach(h => {
       const { x: imgX, y: imgY } = latlngToImagePx(h.lat, h.lon);
       if (imgX < 0 || imgX > IMAGE_DIMS.width || imgY < 0 || imgY > IMAGE_DIMS.height) return;
-      const vpX = imgX / IMAGE_DIMS.width;
-      const vpY = imgY / IMAGE_DIMS.width;
-      const point = new OpenSeadragon.Point(vpX, vpY);
+      const toX = imgX / IMAGE_DIMS.width;
+      const toY = imgY / IMAGE_DIMS.width;
 
       if (existing.has(h.hex)) {
-        // Smoothly animate to new position via CSS transition
-        const el = existing.get(h.hex)!;
-        viewer.updateOverlay(el, point, OpenSeadragon.Placement.CENTER);
+        // Update target — animate from current interpolated position
+        const prev = positions.get(h.hex)!;
+        const t = Math.min(1, (now - prev.startTime) / prev.duration);
+        const curX = prev.fromX + (prev.toX - prev.fromX) * t;
+        const curY = prev.fromY + (prev.toY - prev.fromY) * t;
+        positions.set(h.hex, { fromX: curX, fromY: curY, toX, toY, startTime: now, duration: POLL_MS });
       } else {
-        // Create new overlay
+        // New helicopter — place immediately, no animation yet
         const el = document.createElement('div');
         el.className = 'heli-marker';
         el.textContent = '🚁';
+        const point = new OpenSeadragon.Point(toX, toY);
         viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
         existing.set(h.hex, el);
+        positions.set(h.hex, { fromX: toX, fromY: toY, toX, toY, startTime: now, duration: POLL_MS });
       }
     });
+
+    // Kick off RAF loop if not running
+    if (heliRafRef.current === null && existing.size > 0) {
+      const animate = () => {
+        const v = osdRef.current;
+        if (!v || existing.size === 0) { heliRafRef.current = null; return; }
+        const t = performance.now();
+        existing.forEach((el, hex) => {
+          const pos = positions.get(hex);
+          if (!pos) return;
+          const progress = Math.min(1, (t - pos.startTime) / pos.duration);
+          const x = pos.fromX + (pos.toX - pos.fromX) * progress;
+          const y = pos.fromY + (pos.toY - pos.fromY) * progress;
+          try { v.updateOverlay(el, new OpenSeadragon.Point(x, y), OpenSeadragon.Placement.CENTER); } catch {}
+        });
+        heliRafRef.current = requestAnimationFrame(animate);
+      };
+      heliRafRef.current = requestAnimationFrame(animate);
+    }
   }, []);
 
   // Helicopter live layer — polls every 12s, only after map is ready
