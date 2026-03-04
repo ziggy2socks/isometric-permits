@@ -5,7 +5,19 @@ const NYC_LAT = 40.75;
 const NYC_LON = -74.00;
 const DIST_NM = 25; // nautical miles radius
 const MAX_HELIS = 10;
-const HELI_TYPE_PREFIXES = ['H']; // ICAO type codes starting with H = helicopter
+
+// Known helicopter ICAO type codes (Bell, Airbus, Sikorsky, Robinson, etc.)
+const HELI_TYPES = new Set([
+  'H25B','H500','H60','H64','H69','H72','H76','H47',
+  'B06','B06X','B07','B212','B222','B230','B407','B412','B427','B429','B430','B47G','B47J',
+  'EC20','EC25','EC30','EC35','EC45','EC55','EC75','EC30','AS32','AS35','AS50','AS55','AS65',
+  'S300','S330','S333','S61','S64','S70','S76','S92',
+  'R22','R44','R66',
+  'AW09','AW19','AW89','AW01','AW39',
+  'MD52','MD60','MD83',
+  'EN28','EN48',
+  'K126','K135','K232',
+]);
 
 export interface HelicopterState {
   hex: string;
@@ -27,13 +39,10 @@ export async function fetchHelicopters(): Promise<HelicopterState[]> {
     const ac: any[] = data.ac ?? [];
 
     const helis = ac.filter(a => {
-      const t: string = a.t ?? '';
-      const isHeliType = HELI_TYPE_PREFIXES.some(p => t.startsWith(p));
-      const alt = typeof a.alt_baro === 'number' ? a.alt_baro : null;
-      const gs = typeof a.gs === 'number' ? a.gs : 999;
-      // Include: known heli types, OR low+slow (alt < 2500ft, gs < 120kts) with valid coords
-      const isLowSlow = alt !== null && alt !== 'ground' && alt < 2500 && gs < 120;
-      return (isHeliType || isLowSlow) && a.lat && a.lon && a.alt_baro !== 'ground';
+      const t: string = (a.t ?? '').toUpperCase();
+      const isHeliType = HELI_TYPES.has(t) || t.startsWith('H');
+      const notGround = a.alt_baro !== 'ground' && typeof a.alt_baro === 'number';
+      return isHeliType && notGround && a.lat && a.lon;
     });
 
     // Sort by altitude ascending (lowest = most interesting, closest to map)
