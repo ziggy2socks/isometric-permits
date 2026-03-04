@@ -408,8 +408,9 @@ export default function App() {
     });
   }, []);
 
-  // Helicopter live layer — polls every 12s
+  // Helicopter live layer — polls every 12s, only after map is ready
   useEffect(() => {
+    if (!dziLoaded) return;
     let cancelled = false;
     async function poll() {
       if (cancelled) return;
@@ -419,7 +420,7 @@ export default function App() {
     poll();
     const interval = setInterval(poll, 12000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [placeHelicopters]);
+  }, [dziLoaded, placeHelicopters]);
 
   // Place markers with recency fade
   const placeMarkers = useCallback(() => {
