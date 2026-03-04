@@ -24,7 +24,7 @@ export interface HelicopterState {
   lat: number;
   lon: number;
   alt: number;       // feet
-  track: number;     // degrees
+  track: number;     // degrees (0=N, 90=E, 180=S, 270=W)
   gs: number;        // knots ground speed
 }
 
@@ -53,8 +53,8 @@ export async function fetchHelicopters(): Promise<HelicopterState[]> {
       lat: a.lat,
       lon: a.lon,
       alt: typeof a.alt_baro === 'number' ? a.alt_baro : 0,
-      track: a.track ?? 0,
-      gs: a.gs ?? 0,
+      track: typeof a.track === 'number' ? a.track : 0,
+      gs: typeof a.gs === 'number' ? a.gs : 0,
     }));
   } catch {
     return [];

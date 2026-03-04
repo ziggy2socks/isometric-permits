@@ -298,8 +298,10 @@ export default function App() {
   const permitListWrapRef = useRef<HTMLDivElement>(null);
   const [permitListHeight, setPermitListHeight] = useState(280);
   const heliOverlaysRef = useRef<Map<string, HTMLElement>>(new Map());
+  const heliTrackRef = useRef<Map<string, number>>(new Map()); // hex -> track degrees
   const heliPositionsRef = useRef<Map<string, { fromX: number; fromY: number; toX: number; toY: number; startTime: number; duration: number }>>(new Map());
   const heliRafRef = useRef<number | null>(null);
+  const heliActiveRef = useRef(false);
 
   const [filters, setFilters] = useState<FilterState>({
     jobTypes: new Set(ALL_JOB_TYPES),
@@ -347,6 +349,7 @@ export default function App() {
     return () => {
       labelsRef.current?.destroy();
       labelsRef.current = null;
+      heliActiveRef.current = false;
       if (heliRafRef.current !== null) { cancelAnimationFrame(heliRafRef.current); heliRafRef.current = null; }
       viewer.destroy();
       osdRef.current = null;
@@ -374,13 +377,14 @@ export default function App() {
     return () => clearInterval(interval);
   }, [filters.daysBack]);
 
-  // Helicopter live layer — smooth interpolation between poll updates
+  // Helicopter live layer — smooth interpolation + directional rotation
   const placeHelicopters = useCallback((helis: HelicopterState[]) => {
     const viewer = osdRef.current;
     if (!viewer) return;
     const existing = heliOverlaysRef.current;
     const positions = heliPositionsRef.current;
-    const POLL_MS = 12000; // match poll interval
+    const tracks = heliTrackRef.current;
+    const POLL_MS = 12000;
 
     // Remove stale helicopters
     const activeHexes = new Set(helis.map(h => h.hex));
@@ -389,6 +393,7 @@ export default function App() {
         try { viewer.removeOverlay(el); } catch {}
         existing.delete(hex);
         positions.delete(hex);
+        tracks.delete(hex);
       }
     });
 
@@ -399,19 +404,22 @@ export default function App() {
       if (imgX < 0 || imgX > IMAGE_DIMS.width || imgY < 0 || imgY > IMAGE_DIMS.height) return;
       const toX = imgX / IMAGE_DIMS.width;
       const toY = imgY / IMAGE_DIMS.width;
+      tracks.set(h.hex, h.track);
 
       if (existing.has(h.hex)) {
-        // Update target — animate from current interpolated position
         const prev = positions.get(h.hex)!;
         const t = Math.min(1, (now - prev.startTime) / prev.duration);
         const curX = prev.fromX + (prev.toX - prev.fromX) * t;
         const curY = prev.fromY + (prev.toY - prev.fromY) * t;
         positions.set(h.hex, { fromX: curX, fromY: curY, toX, toY, startTime: now, duration: POLL_MS });
+        // Update rotation immediately
+        const el = existing.get(h.hex)!;
+        el.style.transform = `rotate(${h.track}deg)`;
       } else {
-        // New helicopter — place immediately, no animation yet
         const el = document.createElement('div');
         el.className = 'heli-marker';
         el.textContent = '🚁';
+        el.style.transform = `rotate(${h.track}deg)`;
         const point = new OpenSeadragon.Point(toX, toY);
         viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
         existing.set(h.hex, el);
@@ -419,16 +427,17 @@ export default function App() {
       }
     });
 
-    // Kick off RAF loop if not running
-    if (heliRafRef.current === null && existing.size > 0) {
+    // Start RAF loop if not already running
+    if (!heliActiveRef.current && existing.size > 0) {
+      heliActiveRef.current = true;
       const animate = () => {
         const v = osdRef.current;
-        if (!v || existing.size === 0) { heliRafRef.current = null; return; }
-        const t = performance.now();
+        if (!v || !heliActiveRef.current) return;
+        const now2 = performance.now();
         existing.forEach((el, hex) => {
           const pos = positions.get(hex);
           if (!pos) return;
-          const progress = Math.min(1, (t - pos.startTime) / pos.duration);
+          const progress = Math.min(1, (now2 - pos.startTime) / pos.duration);
           const x = pos.fromX + (pos.toX - pos.fromX) * progress;
           const y = pos.fromY + (pos.toY - pos.fromY) * progress;
           try { v.updateOverlay(el, new OpenSeadragon.Point(x, y), OpenSeadragon.Placement.CENTER); } catch {}
