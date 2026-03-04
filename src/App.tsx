@@ -426,7 +426,8 @@ export default function App() {
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
     if (!viewer) return;
-    viewer.clearOverlays();
+    // Remove only permit overlays — preserve helicopter overlays
+    overlayMarkersRef.current.forEach(el => { try { viewer.removeOverlay(el); } catch {} });
     overlayMarkersRef.current.clear();
     if (!overlayOn || filteredPermits.length === 0) return;
 
