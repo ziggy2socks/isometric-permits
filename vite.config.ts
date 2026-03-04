@@ -26,6 +26,12 @@ export default defineConfig({
         target: 'https://isometric-nyc-tiles.cannoneyed.com',
         changeOrigin: true,
       },
+      // Proxy ADS-B Exchange helicopter data
+      '/api/adsb': {
+        target: 'https://api.adsb.lol',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/adsb/, '/v2'),
+      },
     },
   },
 })

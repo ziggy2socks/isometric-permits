@@ -11,6 +11,10 @@
     {
       "source": "/dzi/:path*",
       "destination": "https://isometric-nyc-tiles.cannoneyed.com/dzi/:path*"
+    },
+    {
+      "source": "/api/adsb/:path*",
+      "destination": "https://api.adsb.lol/v2/:path*"
     }
   ]
 }

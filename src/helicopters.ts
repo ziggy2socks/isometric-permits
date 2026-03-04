@@ -31,7 +31,7 @@ export interface HelicopterState {
 export async function fetchHelicopters(): Promise<HelicopterState[]> {
   try {
     const res = await fetch(
-      `https://api.adsb.lol/v2/lat/${NYC_LAT}/lon/${NYC_LON}/dist/${DIST_NM}`,
+      `/api/adsb/lat/${NYC_LAT}/lon/${NYC_LON}/dist/${DIST_NM}`,
       { cache: 'no-store' }
     );
     if (!res.ok) return [];
