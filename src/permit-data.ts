@@ -139,3 +139,11 @@ export function formatDate(dateStr?: string): string {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   } catch { return dateStr; }
 }
+
+export const WORK_TYPE_EMOJIS: Record<string, string> = {
+  NB:'🏗', DM:'💥', GC:'🔨', PL:'🔵', ME:'⚙️', SOL:'☀️',
+  SHD:'🏚', SCF:'🪜', FNC:'🚧', SG:'📋', FND:'🪨', STR:'🔩',
+  BLR:'🔥', SPR:'💧', EW:'🌍', ANT:'📡', CC:'🛤', STP:'🚿', OTH:'📌',
+};
+
+export function getJobEmoji(jobType: string): string { return WORK_TYPE_EMOJIS[jobType] ?? '📌'; }

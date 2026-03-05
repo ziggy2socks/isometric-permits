@@ -7,6 +7,7 @@ import PermitSidebar from './PermitSidebar';
 import IsoView from './IsoView';
 import MapView from './MapView';
 import './PermitSidebar.css';
+import './AppShell.css';
 
 export default function AppShell() {
   const { view } = usePermits();
