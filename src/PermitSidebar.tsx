@@ -2,7 +2,7 @@
  * PermitSidebar — shared filter sidebar for both Iso and Map views.
  * Reads/writes via PermitContext.
  */
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import { usePermits } from './PermitContext';
 import {
   ALL_JOB_TYPES, ALL_BOROUGHS,
@@ -16,14 +16,14 @@ const BOROUGH_SHORT: Record<string, string> = {
 };
 
 interface Props {
-  /** Render the permit list rows (view-specific: iso has dots, map has click-to-fly) */
   onSelectPermit?: (p: Permit) => void;
-  /** Mobile: is sidebar open? */
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  /** Slot for view-specific header controls (e.g. ? and ON/OFF for iso view) */
+  headerActions?: React.ReactNode;
 }
 
-export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClose }: Props) {
+export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClose, headerActions }: Props) {
   const {
     view, setView,
     filters, loading, error, overLimit,
@@ -54,16 +54,17 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
       <div className="ps-header">
         <div className="ps-header-row">
           <span className="ps-title">NYC PERMIT PULSE</span>
-          <div className="ps-view-toggle">
-            <button
-              className={`ps-view-btn${view === 'iso' ? ' active' : ''}`}
-              onClick={() => setView('iso')}
-              title="Isometric view">ISO</button>
-            <button
-              className={`ps-view-btn${view === 'map' ? ' active' : ''}`}
-              onClick={() => setView('map')}
-              title="Map view">MAP</button>
-          </div>
+          {headerActions && <div className="ps-header-actions">{headerActions}</div>}
+        </div>
+        <div className="ps-view-toggle-row">
+          <button
+            className={`ps-view-btn${view === 'iso' ? ' active' : ''}`}
+            onClick={() => setView('iso')}
+            title="Isometric view">ISO VIEW</button>
+          <button
+            className={`ps-view-btn${view === 'map' ? ' active' : ''}`}
+            onClick={() => setView('map')}
+            title="Map view">MAP VIEW</button>
         </div>
         <div className="ps-count-row">
           {loading ? (

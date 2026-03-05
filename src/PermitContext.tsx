@@ -78,7 +78,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   const [dateFrom, setDateFrom] = useState(daysAgoStr(7));
   const [dateTo,   setDateTo]   = useState(todayStr());
   const [jobTypes, setJobTypes] = useState<Set<string>>(new Set(ALL_JOB_TYPES));
-  const [boroughs, setBoroughs] = useState<Set<string>>(new Set(['MANHATTAN', 'BROOKLYN', 'QUEENS', 'BRONX', 'STATEN ISLAND']));
+  const [boroughs, setBoroughs] = useState<Set<string>>(new Set(['MANHATTAN']));
   const [search,   setSearch]   = useState('');
 
   // Data

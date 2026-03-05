@@ -3,7 +3,7 @@
  * Consumes filtered permits from PermitContext.
  * Sidebar is rendered by AppShell via PermitSidebar.
  */
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
 import OpenSeadragon from 'openseadragon';
 import type { Permit } from './types';
@@ -124,11 +124,11 @@ function DrawerField({ label, value, mono }: { label: string; value: string; mon
 
 // ── Permit row (virtualized list) ─────────────────────────────────────────────
 function PermitRow({ index, style, data }: ListChildComponentProps) {
-  const { sortedPermits, selectedPermit, setDrawerPermit, setSelectedPermit, flyToPermit } = data as {
+  const { sortedPermits, selectedPermit, setDrawerPermit, setSelected, flyToPermit } = data as {
     sortedPermits: Permit[];
     selectedPermit: Permit | null;
     setDrawerPermit: (p: Permit) => void;
-    setSelectedPermit: (p: Permit) => void;
+    setSelected: (p: Permit) => void;
     flyToPermit: (p: Permit) => void;
   };
   const p    = sortedPermits[index];
@@ -138,7 +138,7 @@ function PermitRow({ index, style, data }: ListChildComponentProps) {
   return (
     <div style={style}
       className={`permit-row${isSelected ? ' permit-row--selected' : ''}`}
-      onClick={() => { setSelectedPermit(p); setDrawerPermit(p); flyToPermit(p); }}>
+      onClick={() => { setSelected(p); setDrawerPermit(p); flyToPermit(p); }}>
       <span className="permit-row-dot" style={{ background: color, color, boxShadow: `0 0 4px 1px ${color}` }} />
       <div className="permit-row-content">
         <div className="permit-row-top">
@@ -152,7 +152,14 @@ function PermitRow({ index, style, data }: ListChildComponentProps) {
 }
 
 // ── IsoView ───────────────────────────────────────────────────────────────────
-export default function IsoView() {
+interface IsoViewProps {
+  flyRef?: React.MutableRefObject<((p: Permit) => void) | null>;
+  overlayOn?: boolean;
+  infoOpen?: boolean;
+  setInfoOpen?: (v: boolean) => void;
+}
+
+export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, setInfoOpen }: IsoViewProps) {
   const { filtered, selected, setSelected } = usePermits();
 
   const viewerRef          = useRef<HTMLDivElement>(null);
@@ -169,14 +176,14 @@ export default function IsoView() {
   const listRef            = useRef<List>(null);
   const permitListWrapRef  = useRef<HTMLDivElement>(null);
 
-  const [dziLoaded,       setDziLoaded]       = useState(false);
-  const [overlayOn,       setOverlayOn]       = useState(true);
-  const [filtersOpen,     setFiltersOpen]     = useState(true);
-  const [permitsOpen,     setPermitsOpen]     = useState(true);
-  const [infoOpen,        setInfoOpen]        = useState(false);
-  const [drawerPermit,    setDrawerPermit]    = useState<Permit | null>(null);
-  const [tooltip,         setTooltip]         = useState<{ permit: Permit; x: number; y: number } | null>(null);
-  const [permitListHeight, setPermitListHeight] = useState(280);
+  const [dziLoaded,        setDziLoaded]      = useState(false);
+  const [drawerPermit,     setDrawerPermit]   = useState<Permit | null>(null);
+  const [tooltip,          setTooltip]        = useState<{ permit: Permit; x: number; y: number } | null>(null);
+  // Use a ref for setDrawerPermit so marker click closures always get the latest version
+  const setDrawerRef = useRef<(p: Permit | null) => void>(setDrawerPermit);
+  const setSelectedRef = useRef<(p: Permit | null) => void>(setSelected);
+  useEffect(() => { setDrawerRef.current = setDrawerPermit; }, [setDrawerPermit]);
+  useEffect(() => { setSelectedRef.current = setSelected; }, [setSelected]);
 
   // OSD init
   useEffect(() => {
@@ -281,6 +288,10 @@ export default function IsoView() {
     return () => { heliActiveRef.current = false; clearInterval(iv); };
   }, [placeHelicopters]);
 
+  // Keep overlayOn in a ref so placeMarkers closure always reads the latest value
+  const overlayOnRef = useRef(overlayOn);
+  useEffect(() => { overlayOnRef.current = overlayOn; }, [overlayOn]);
+
   // Place permit markers
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
@@ -289,7 +300,7 @@ export default function IsoView() {
     if (markerRafRef.current !== null) cancelAnimationFrame(markerRafRef.current);
     overlayMarkersRef.current.forEach(el => viewer.removeOverlay(el));
     overlayMarkersRef.current.clear();
-    if (!overlayOn || filtered.length === 0) return;
+    if (!overlayOnRef.current || filtered.length === 0) return;
     const opacities = computeOpacities(filtered);
     const CHUNK = 50; let i = 0;
     const addChunk = () => {
@@ -311,16 +322,23 @@ export default function IsoView() {
         el.addEventListener('mouseenter', (e) => { setTooltip({ permit, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }); });
         el.addEventListener('mouseleave', () => setTooltip(null));
         el.addEventListener('mousemove',  (e) => setTooltip(t => t ? { ...t, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null));
-        el.addEventListener('click', () => { setDrawerPermit(permit); setSelected(permit); });
+        el.addEventListener('click', () => { setDrawerRef.current(permit); setSelectedRef.current(permit); });
         viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
         overlayMarkersRef.current.set(key, el);
       }
       if (i < filtered.length) markerRafRef.current = requestAnimationFrame(addChunk);
     };
     markerRafRef.current = requestAnimationFrame(addChunk);
-  }, [filtered, overlayOn, setSelected]);
+  }, [filtered, setSelected]);
 
-  useEffect(() => { if (dziLoaded) placeMarkers(); }, [dziLoaded, placeMarkers]);
+  // Debounce marker placement — don't re-render on every keystroke
+  const markerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!dziLoaded) return;
+    if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current);
+    markerDebounceRef.current = setTimeout(() => { placeMarkers(); }, 300);
+    return () => { if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current); };
+  }, [dziLoaded, placeMarkers, overlayOn]); // overlayOn triggers re-place via overlayOnRef
 
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;
@@ -332,6 +350,11 @@ export default function IsoView() {
     viewer.viewport.panTo(new OpenSeadragon.Point(imgX / IMAGE_DIMS.width, imgY / IMAGE_DIMS.width));
     viewer.viewport.zoomTo(viewer.viewport.getZoom() > 4 ? viewer.viewport.getZoom() : 6);
   }, []);
+
+  // Expose flyToPermit via ref so AppShell can call it from sidebar list clicks
+  useEffect(() => {
+    if (flyRef) flyRef.current = flyToPermit;
+  }, [flyRef, flyToPermit]);
 
   const sortedPermits = useMemo(() => [...filtered].sort((a, b) =>
     new Date(b.issued_date ?? b.approved_date ?? '').getTime() -
@@ -375,13 +398,7 @@ export default function IsoView() {
         </div>
       )}
 
-      {/* Compact iso-specific controls — ON/OFF + ? only */}
-      <div className="iso-controls">
-        <button className="info-btn" onClick={() => setInfoOpen(true)} title="About">?</button>
-        <button className={`overlay-toggle ${overlayOn ? 'on' : 'off'}`} onClick={() => setOverlayOn(v => !v)}>
-          {overlayOn ? 'ON' : 'OFF'}
-        </button>
-      </div>
+      {/* Controls are rendered in sidebar header via AppShell headerActions slot */}
 
       {/* Permit detail drawer */}
       {drawerPermit && (
@@ -389,12 +406,12 @@ export default function IsoView() {
       )}
 
       {/* Info modal */}
-      {infoOpen && (
+      {infoOpen && setInfoOpen && (
         <div className="info-backdrop" onClick={() => setInfoOpen(false)}>
           <div className="info-modal" onClick={e => e.stopPropagation()}>
             <div className="info-header">
               <span className="info-title">NYC PERMIT PULSE</span>
-              <button className="info-close" onClick={() => setInfoOpen(false)}>✕</button>
+              <button className="info-close" onClick={() => setInfoOpen?.(false)}>✕</button>
             </div>
             <div className="info-body">
               <p>A live overlay of NYC DOB permit activity on the isometric pixel-art map by <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>.</p>

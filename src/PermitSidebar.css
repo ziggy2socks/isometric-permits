@@ -50,10 +50,14 @@
   color: var(--pp-cyan);
 }
 
-/* ISO / MAP toggle */
-.ps-view-toggle {
+/* Header actions slot (? and ON/OFF passed from IsoView) */
+.ps-header-actions { display: flex; gap: 6px; align-items: center; }
+
+/* ISO / MAP toggle row — sits below title */
+.ps-view-toggle-row {
   display: flex;
   gap: 3px;
+  margin-top: 2px;
 }
 
 .ps-view-btn {
