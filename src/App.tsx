@@ -294,6 +294,7 @@ export default function App() {
   const [permitsOpen, setPermitsOpen] = useState(true);
   const [infoOpen, setInfoOpen] = useState(false);
   const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const listRef = useRef<List>(null);
   const permitListWrapRef = useRef<HTMLDivElement>(null);
   const [permitListHeight, setPermitListHeight] = useState(280);
@@ -633,8 +634,16 @@ export default function App() {
 
       {error && <div className="error-banner">{error}</div>}
 
+      {/* ── Mobile sidebar toggle ── */}
+      <button className="mobile-sidebar-btn" onClick={() => setMobileSidebarOpen(v => !v)}>
+        {mobileSidebarOpen ? '✕' : '☰'}
+      </button>
+
+      {/* ── Mobile overlay backdrop ── */}
+      {mobileSidebarOpen && <div className="mobile-backdrop" onClick={() => setMobileSidebarOpen(false)} />}
+
       {/* ── Sidebar ── */}
-      <div className="sidebar">
+      <div className={`sidebar${mobileSidebarOpen ? ' sidebar--mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-title-row">
             <span className="sidebar-title">NYC PERMIT PULSE</span>
