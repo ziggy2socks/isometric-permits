@@ -258,12 +258,13 @@ export default function PermitMap() {
       {/* Sidebar */}
       <div className={`permit-sidebar${sidebarOpen ? ' permit-sidebar--open' : ''}`}>
         <div className="permit-sidebar-header">
-          <div className="permit-title">
-            <span className="permit-title-main">PERMIT EXPLORER</span>
-            <span className="permit-title-dot">·</span>
-            <span className="permit-title-sub">NYC DOB</span>
+          <div className="permit-header-row">
+            <span className="permit-title-main">NYC PERMIT PULSE</span>
+            <div className="permit-header-actions">
+              <a href="/" className="permit-view-switch" title="Switch to isometric view">ISO</a>
+            </div>
           </div>
-          <a href="/" className="permit-back">← Isometric</a>
+          <a href="/" className="permit-view-link">ISO VIEW →</a>
         </div>
 
         {/* Date range */}

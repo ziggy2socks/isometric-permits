@@ -44,12 +44,18 @@
   padding: 14px 14px 10px;
   border-bottom: 1px solid var(--pp-border);
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 6px;
   flex-shrink: 0;
 }
 
-.permit-title { display: flex; align-items: baseline; gap: 5px; }
+/* Top row: title + ISO button — mirrors PP header exactly */
+.permit-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .permit-title-main {
   font-size: 11px;
   font-weight: bold;
@@ -57,21 +63,45 @@
   text-transform: uppercase;
   color: var(--pp-cyan);
 }
-.permit-title-dot { color: var(--pp-muted); }
-.permit-title-sub {
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--pp-muted);
+
+.permit-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.permit-back {
-  font-size: 9px;
+
+/* ISO button — styled like PP's ON/OFF toggle */
+.permit-view-switch {
+  font-size: 10px;
+  font-family: var(--pp-font);
+  font-weight: bold;
   letter-spacing: 1px;
+  padding: 3px 8px;
+  border: 1px solid var(--pp-border);
+  color: var(--pp-muted);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.permit-view-switch:hover {
+  border-color: var(--pp-cyan);
+  color: var(--pp-cyan);
+  text-shadow: 0 0 8px var(--pp-cyan);
+}
+
+/* Sub-link: ISO VIEW → — mirrors PP's MAP VIEW → */
+.permit-view-link {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 2px;
   color: var(--pp-muted);
   text-decoration: none;
   text-transform: uppercase;
+  transition: color 0.15s;
 }
-.permit-back:hover { color: var(--pp-cyan); }
+.permit-view-link:hover {
+  color: var(--pp-cyan);
+  text-shadow: 0 0 8px var(--pp-cyan);
+}
 
 .permit-section {
   padding: 10px 14px 8px;

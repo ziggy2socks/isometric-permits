@@ -79,6 +79,22 @@ html, body, #root {
   letter-spacing: 1px;
 }
 
+/* MAP VIEW → link below header — added when map view is ready to announce */
+.map-view-link {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+.map-view-link:hover {
+  color: var(--cyan);
+  text-shadow: 0 0 8px var(--cyan);
+}
+
 /* ── Overlay on/off toggle ── */
 .overlay-toggle {
   font: bold 10px var(--font);
