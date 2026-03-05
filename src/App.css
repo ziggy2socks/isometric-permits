@@ -918,14 +918,15 @@ html, body, #root {
 }
 
 @media (max-width: 768px) {
-  /* Show mobile toggle button */
+  /* Show mobile toggle button — top right */
   .mobile-sidebar-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     position: fixed;
     top: 12px;
-    left: 12px;
+    right: 12px;
+    left: auto;
     z-index: 200;
     width: 38px;
     height: 38px;
@@ -936,6 +937,11 @@ html, body, #root {
     cursor: pointer;
     border-radius: 4px;
     backdrop-filter: blur(8px);
+  }
+
+  /* No tooltips on mobile — drawer bottom sheet is the interaction */
+  .tooltip {
+    display: none;
   }
 
   /* Backdrop when sidebar open */
@@ -982,11 +988,6 @@ html, body, #root {
   @keyframes drawer-in-mobile {
     from { transform: translateY(20px); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
-  }
-
-  /* Tooltip — keep centered above dot but don't overflow */
-  .tooltip {
-    max-width: calc(100vw - 32px);
   }
 
   /* Info modal — full screen on mobile */

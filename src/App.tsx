@@ -325,7 +325,7 @@ export default function App() {
       element: viewerRef.current,
       prefixUrl: '',
       showNavigationControl: false,
-      showNavigator: true,
+      showNavigator: window.innerWidth > 768,
       navigatorPosition: 'BOTTOM_RIGHT',
       navigatorSizeRatio: 0.12,
       navigatorBackground: '#0a0c14',
