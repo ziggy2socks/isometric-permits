@@ -317,12 +317,18 @@ export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, se
         const el = document.createElement('div');
         el.className = 'permit-marker';
         const color = getJobColor(permit.job_type ?? '');
-        el.style.cssText = `width:8px;height:8px;border-radius:50%;background:${color};box-shadow:0 0 4px 1px ${color};opacity:${opacities.get(permit) ?? 1};cursor:pointer;`;
+        el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};box-shadow:0 0 4px 1px ${color};opacity:${opacities.get(permit) ?? 1};cursor:pointer;pointer-events:auto;`;
         const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${i}`;
         el.addEventListener('mouseenter', (e) => { setTooltip({ permit, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }); });
         el.addEventListener('mouseleave', () => setTooltip(null));
         el.addEventListener('mousemove',  (e) => setTooltip(t => t ? { ...t, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null));
-        el.addEventListener('click', () => { setDrawerRef.current(permit); setSelectedRef.current(permit); });
+        el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.stopImmediatePropagation(); });
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          setDrawerRef.current(permit);
+          setSelectedRef.current(permit);
+        });
         viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
         overlayMarkersRef.current.set(key, el);
       }
