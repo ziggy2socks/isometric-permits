@@ -337,6 +337,10 @@ export default function App() {
       imageSmoothingEnabled: false,
       drawer: 'canvas',
     });
+    viewer.addHandler('canvas-click', () => {
+      setDrawerPermit(null);
+      setSelectedPermit(null);
+    });
     viewer.addHandler('open', () => {
       setDziLoaded(true);
       labelsRef.current = new NeighborhoodLabels(viewer);
@@ -734,7 +738,7 @@ export default function App() {
 
       {/* ── Permit detail drawer ── */}
       {drawerPermit && (
-        <PermitDrawer permit={drawerPermit} onClose={() => setDrawerPermit(null)} />
+        <PermitDrawer permit={drawerPermit} onClose={() => { setDrawerPermit(null); setSelectedPermit(null); }} />
       )}
 
       {/* ── Info modal ── */}
