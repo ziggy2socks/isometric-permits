@@ -39,7 +39,7 @@ const MAP_STYLE = {
 const LEGEND_TYPES = ['NB', 'DM', 'GC', 'PL', 'ME'];
 
 export default function MapView() {
-  const { filtered, selected, setSelected } = usePermits();
+  const { filtered, mapPermits, selected, setSelected } = usePermits();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef          = useRef<maplibregl.Map | null>(null);
   const popupRef        = useRef<maplibregl.Popup | null>(null);
@@ -87,7 +87,7 @@ export default function MapView() {
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // Update dots when filtered changes
+  // Update dots when mapPermits changes (capped for performance)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -96,7 +96,7 @@ export default function MapView() {
       if (!src) return;
       src.setData({
         type: 'FeatureCollection',
-        features: filtered
+        features: mapPermits
           .filter(p => p.latitude && p.longitude)
           .map(p => ({
             type: 'Feature' as const,
@@ -110,7 +110,7 @@ export default function MapView() {
     };
     if (map.isStyleLoaded()) setData();
     else map.once('load', setData);
-  }, [filtered]);
+  }, [mapPermits]);
 
   const selectPermit = useCallback((permit: Permit, map?: maplibregl.Map) => {
     setSelected(permit);

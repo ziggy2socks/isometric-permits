@@ -160,7 +160,7 @@ interface IsoViewProps {
 }
 
 export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, setInfoOpen }: IsoViewProps) {
-  const { filtered, selected, setSelected } = usePermits();
+  const { filtered, mapPermits, selected, setSelected } = usePermits();
 
   const viewerRef          = useRef<HTMLDivElement>(null);
   const osdRef             = useRef<OpenSeadragon.Viewer | null>(null);
@@ -300,14 +300,14 @@ export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, se
     if (markerRafRef.current !== null) cancelAnimationFrame(markerRafRef.current);
     overlayMarkersRef.current.forEach(el => viewer.removeOverlay(el));
     overlayMarkersRef.current.clear();
-    if (!overlayOnRef.current || filtered.length === 0) return;
-    const opacities = computeOpacities(filtered);
+    if (!overlayOnRef.current || mapPermits.length === 0) return;
+    const opacities = computeOpacities(mapPermits);
     const CHUNK = 50; let i = 0;
     const addChunk = () => {
       if (gen !== markerGenRef.current) return;
-      const end = Math.min(i + CHUNK, filtered.length);
+      const end = Math.min(i + CHUNK, mapPermits.length);
       for (; i < end; i++) {
-        const permit = filtered[i];
+        const permit = mapPermits[i];
         const lat = parseFloat(permit.latitude ?? '');
         const lng = parseFloat(permit.longitude ?? '');
         if (isNaN(lat) || isNaN(lng)) continue;
@@ -332,10 +332,10 @@ export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, se
         viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
         overlayMarkersRef.current.set(key, el);
       }
-      if (i < filtered.length) markerRafRef.current = requestAnimationFrame(addChunk);
+      if (i < mapPermits.length) markerRafRef.current = requestAnimationFrame(addChunk);
     };
     markerRafRef.current = requestAnimationFrame(addChunk);
-  }, [filtered, setSelected]);
+  }, [mapPermits, setSelected]);
 
   // Debounce marker placement — don't re-render on every keystroke
   const markerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -344,7 +344,7 @@ export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, se
     if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current);
     markerDebounceRef.current = setTimeout(() => { placeMarkers(); }, 300);
     return () => { if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current); };
-  }, [dziLoaded, placeMarkers, overlayOn]); // overlayOn triggers re-place via overlayOnRef
+  }, [dziLoaded, placeMarkers, overlayOn, mapPermits]); // mapPermits change triggers re-place
 
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;

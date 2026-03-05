@@ -26,8 +26,8 @@ interface Props {
 export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClose, headerActions }: Props) {
   const {
     view, setView,
-    filters, loading, error, overLimit,
-    filtered, allPermits,
+    filters, loading, error,
+    filtered, mapPermits,
     setDateFrom, setDateTo,
     toggleJobType, setAllJobTypes, setNoJobTypes,
     toggleBorough, setSearch,
@@ -74,9 +74,9 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
           ) : (
             <>
               <span className="ps-count">{filtered.length.toLocaleString()} permits</span>
-              {overLimit && (
+              {mapPermits.length < filtered.length && (
                 <span className="ps-limit-warn" title="Tighten filters to see all results.">
-                  ⚠ map capped at 2,500
+                  ⚠ map showing {mapPermits.length.toLocaleString()}
                 </span>
               )}
             </>

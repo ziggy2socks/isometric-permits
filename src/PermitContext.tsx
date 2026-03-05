@@ -1,6 +1,10 @@
 /**
  * PermitContext — shared state between Isometric and Map views.
- * Filter state, fetched permits, and view toggle all live here.
+ *
+ * Design:
+ * - `filtered`    = full client-filtered list (all results, for sidebar list/search)
+ * - `mapPermits`  = capped at MAP_LIMIT (most recent first), for map dot rendering
+ * - API fetch cap = LIST_LIMIT (large enough to cover any reasonable search)
  */
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import type { Permit } from './types';
@@ -19,18 +23,15 @@ export interface PermitFilters {
 }
 
 export interface PermitContextValue {
-  // View
   view:      ViewMode;
   setView:   (v: ViewMode) => void;
 
-  // Raw data
   allPermits:     Permit[];
   loading:        boolean;
   error:          string | null;
-  overLimit:      boolean;
+  totalFetched:   number;     // how many the API returned (may be < LIST_LIMIT)
   reload:         () => void;
 
-  // Filters
   filters:        PermitFilters;
   setDateFrom:    (d: string) => void;
   setDateTo:      (d: string) => void;
@@ -40,17 +41,17 @@ export interface PermitContextValue {
   toggleBorough:  (b: string) => void;
   setSearch:      (s: string) => void;
 
-  // Derived
-  filtered:       Permit[];
+  filtered:       Permit[];   // full filtered list — for sidebar
+  mapPermits:     Permit[];   // capped at MAP_LIMIT — for dot rendering
 
-  // Selection
   selected:       Permit | null;
   setSelected:    (p: Permit | null) => void;
 }
 
-// ── Defaults ──────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const RESULT_LIMIT = 2500;
+const LIST_LIMIT = 10_000;  // max fetched from API (covers any realistic date range)
+const MAP_LIMIT  = 2_000;   // max dots rendered on map (performance cap)
 
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function daysAgoStr(n: number) {
@@ -63,15 +64,12 @@ function daysAgoStr(n: number) {
 const PermitContext = createContext<PermitContextValue | null>(null);
 
 export function PermitProvider({ children }: { children: ReactNode }) {
-  // View mode — driven by URL path
   const [view, setViewState] = useState<ViewMode>(
     window.location.pathname.startsWith('/map') ? 'map' : 'iso'
   );
-
   const setView = useCallback((v: ViewMode) => {
     setViewState(v);
-    const url = v === 'map' ? '/map' : '/';
-    window.history.pushState({}, '', url);
+    window.history.pushState({}, '', v === 'map' ? '/map' : '/');
   }, []);
 
   // Filters
@@ -82,10 +80,10 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   const [search,   setSearch]   = useState('');
 
   // Data
-  const [allPermits, setAllPermits] = useState<Permit[]>([]);
-  const [loading,    setLoading]    = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
-  const [overLimit,  setOverLimit]  = useState(false);
+  const [allPermits,   setAllPermits]   = useState<Permit[]>([]);
+  const [totalFetched, setTotalFetched] = useState(0);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
   const fetchKey = useRef(0);
 
   const load = useCallback(async () => {
@@ -93,10 +91,10 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchPermits(dateFrom, dateTo, RESULT_LIMIT);
-      if (key !== fetchKey.current) return; // stale
+      const data = await fetchPermits(dateFrom, dateTo, LIST_LIMIT);
+      if (key !== fetchKey.current) return;
       setAllPermits(data);
-      setOverLimit(data.length >= RESULT_LIMIT);
+      setTotalFetched(data.length);
     } catch (e) {
       if (key !== fetchKey.current) return;
       setError((e as Error).message);
@@ -107,7 +105,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Client-side filter
+  // Full client-side filter — for sidebar list (no cap)
   const filtered = useMemo(() => {
     let r = allPermits;
     if (jobTypes.size < ALL_JOB_TYPES.length) {
@@ -133,6 +131,12 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     return r;
   }, [allPermits, jobTypes, boroughs, search]);
 
+  // Map cap — most recent first, hard capped at MAP_LIMIT
+  const mapPermits = useMemo(() => {
+    if (filtered.length <= MAP_LIMIT) return filtered;
+    return filtered.slice(0, MAP_LIMIT); // already sorted DESC by issued_date from API
+  }, [filtered]);
+
   // Selection
   const [selected, setSelected] = useState<Permit | null>(null);
 
@@ -151,13 +155,14 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   return (
     <PermitContext.Provider value={{
       view, setView,
-      allPermits, loading, error, overLimit, reload: load,
+      allPermits, loading, error, totalFetched, reload: load,
       filters,
       setDateFrom, setDateTo,
       toggleJobType, setAllJobTypes, setNoJobTypes,
       toggleBorough,
       setSearch,
       filtered,
+      mapPermits,
       selected, setSelected,
     }}>
       {children}
