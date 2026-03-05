@@ -280,6 +280,7 @@ export default function App() {
   const viewerRef = useRef<HTMLDivElement>(null);
   const osdRef = useRef<OpenSeadragon.Viewer | null>(null);
   const overlayMarkersRef = useRef<Map<string, HTMLElement>>(new Map());
+  const markerGenRef = useRef(0);
   const labelsRef = useRef<NeighborhoodLabels | null>(null);
   const markerRafRef = useRef<number | null>(null);
 
@@ -505,11 +506,14 @@ export default function App() {
       markerRafRef.current = null;
     }
 
+    // Increment generation — stale RAF callbacks will see a mismatched gen and bail
+    const gen = ++markerGenRef.current;
+
     // Add markers in chunks of 400 per frame to avoid blocking the main thread
     const CHUNK = 400;
     let i = 0;
     function addChunk() {
-      if (!osdRef.current) return; // viewer may have been destroyed
+      if (!osdRef.current || markerGenRef.current !== gen) return; // stale or destroyed
       const end = Math.min(i + CHUNK, entries.length);
       for (; i < end; i++) {
         const { el, vpX, vpY, permit, key, opacity } = entries[i];
