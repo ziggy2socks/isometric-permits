@@ -15,6 +15,14 @@
     {
       "source": "/api/adsb/:path*",
       "destination": "https://api.adsb.lol/v2/:path*"
+    },
+    {
+      "source": "/map",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
