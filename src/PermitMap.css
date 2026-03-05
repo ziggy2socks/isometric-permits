@@ -373,6 +373,7 @@
   position: relative;
   min-width: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 .permit-map {
@@ -412,8 +413,10 @@
 /* ── Detail Panel ────────────────────────────────────────────────────────── */
 
 .permit-detail {
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 270px;
-  flex-shrink: 0;
   height: 100%;
   background: var(--pp-panel);
   border-left: 1px solid var(--pp-border);
@@ -421,7 +424,8 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  z-index: 10;
+  z-index: 20;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
 }
 
 .permit-detail::-webkit-scrollbar { width: 4px; }
