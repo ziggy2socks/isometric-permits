@@ -468,7 +468,11 @@ export default function App() {
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
     if (!viewer) return;
-    // Remove only permit overlays — preserve helicopter overlays
+
+    // Nuclear clear: remove every permit overlay by DOM class, not just tracked refs
+    // (guards against stale elements that slipped past ref tracking)
+    const allOverlayEls = viewer.element.querySelectorAll('.permit-marker');
+    allOverlayEls.forEach(el => { try { viewer.removeOverlay(el as HTMLElement); } catch {} });
     overlayMarkersRef.current.forEach(el => { try { viewer.removeOverlay(el); } catch {} });
     overlayMarkersRef.current.clear();
     if (!overlayOn || filteredPermits.length === 0) return;
