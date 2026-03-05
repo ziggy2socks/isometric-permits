@@ -136,19 +136,7 @@ export default function MapView() {
     <div className="map-view">
       <div ref={mapContainerRef} className="map-view-canvas" />
 
-      {/* Legend */}
-      <div className="map-legend">
-        {LEGEND_TYPES.map(t => (
-          <div key={t} className="map-legend-item">
-            <span className="map-legend-dot" style={{ backgroundColor: WORK_TYPE_COLORS[t], boxShadow: `0 0 5px ${WORK_TYPE_COLORS[t]}` }} />
-            <span className="map-legend-label">{WORK_TYPE_LABELS[t]}</span>
-          </div>
-        ))}
-        <div className="map-legend-item">
-          <span className="map-legend-dot" style={{ backgroundColor: '#999', boxShadow: '0 0 5px #999' }} />
-          <span className="map-legend-label">Other</span>
-        </div>
-      </div>
+
 
       {/* Detail panel */}
       {selected && (
