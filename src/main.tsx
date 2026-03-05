@@ -1,14 +1,13 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './App.css'
-import App from './App.tsx'
-import PermitMap from './PermitMap.tsx'
-
-// Path-based routing — no router library needed
-const isMapView = window.location.pathname.startsWith('/map');
+import { PermitProvider } from './PermitContext'
+import AppShell from './AppShell'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isMapView ? <PermitMap /> : <App />}
+    <PermitProvider>
+      <AppShell />
+    </PermitProvider>
   </StrictMode>,
 )
