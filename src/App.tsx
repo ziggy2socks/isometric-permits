@@ -350,7 +350,7 @@ export default function App() {
     });
     // Enforce minimum helicopter size — OSD shrinks overlays proportional to 1/zoom.
     // We counter-scale to maintain a minimum visible pixel size.
-    const MIN_HELI_PX = 12;
+    const MIN_HELI_PX = 6;
     viewer.addHandler('zoom', () => {
       const zoom = viewer.viewport.getZoom();
       const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
@@ -452,7 +452,7 @@ export default function App() {
     // Apply current zoom scale to newly placed/updated helis
     const zoom = viewer.viewport.getZoom();
     const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
-    const s = effectiveSize < 12 ? 12 / effectiveSize : 1;
+    const s = effectiveSize < 6 ? 6 / effectiveSize : 1;
     existing.forEach(el => {
       const scaleDiv = el.querySelector('.heli-scale') as HTMLElement;
       if (scaleDiv) scaleDiv.style.transform = `scale(${s})`;
