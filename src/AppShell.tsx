@@ -71,8 +71,8 @@ export default function AppShell() {
               </div>
 
               <p className="info-note">
-                Data sourced from NYC Open Data (DOB NOW: Build). Published with a 2–5 day lag — not for legal or compliance use.
-                No personal data collected or stored.
+                Data sourced from NYC Open Data (DOB NOW: Build), published with a 2–5 day lag.
+                Provided as-is — verify with <a href="https://www.nyc.gov/site/buildings/index.page" target="_blank" rel="noopener noreferrer">NYC DOB</a> for official permit status.
               </p>
             </div>
           </div>
