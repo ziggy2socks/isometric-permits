@@ -54,8 +54,8 @@ export interface PermitContextValue {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const LIST_LIMIT = 10_000;  // max fetched from API
-const ISO_LIMIT  = 1_200;   // OSD overlays are expensive — keep iso snappy
-const MAP_LIMIT  = 2_400;   // MapLibre GL points are cheap, higher cap fine
+const ISO_LIMIT  = 1_000;   // OSD overlays are expensive — keep iso snappy
+const MAP_LIMIT  = 3_000;   // MapLibre GL points are cheap, higher cap fine
 
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function daysAgoStr(n: number) {
