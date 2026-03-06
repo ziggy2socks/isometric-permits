@@ -16,24 +16,14 @@ export default function AppShell() {
   const { view } = usePermits();
   const isoFlyRef = useRef<((p: Permit) => void) | null>(null);
   // Iso-specific controls — lifted here so they render in sidebar header slot
-  const [overlayOn, setOverlayOn] = useState(true);
-  const [infoOpen,  setInfoOpen]  = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const handleSidebarSelect = (p: Permit) => {
     if (view === 'iso') isoFlyRef.current?.(p);
   };
 
-  // ? always visible; ON/OFF only in iso view
   const isoHeaderActions = (
-    <>
-      <button className="info-btn" onClick={() => setInfoOpen(true)} title="About">?</button>
-      {view === 'iso' && (
-        <button className={`overlay-toggle ${overlayOn ? 'on' : 'off'}`}
-          onClick={() => setOverlayOn(v => !v)}>
-          {overlayOn ? 'ON' : 'OFF'}
-        </button>
-      )}
-    </>
+    <button className="info-btn" onClick={() => setInfoOpen(true)} title="About">?</button>
   );
 
   return (
@@ -41,7 +31,7 @@ export default function AppShell() {
       <PermitSidebar onSelectPermit={handleSidebarSelect} headerActions={isoHeaderActions} />
       <div className="shell-view">
         {view === 'iso'
-          ? <IsoView flyRef={isoFlyRef} overlayOn={overlayOn} />
+          ? <IsoView flyRef={isoFlyRef} />
           : <MapView />}
       </div>
 

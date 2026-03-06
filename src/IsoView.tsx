@@ -154,10 +154,9 @@ function PermitRow({ index, style, data }: ListChildComponentProps) {
 // ── IsoView ───────────────────────────────────────────────────────────────────
 interface IsoViewProps {
   flyRef?: React.MutableRefObject<((p: Permit) => void) | null>;
-  overlayOn?: boolean;
 }
 
-export default function IsoView({ flyRef, overlayOn = true }: IsoViewProps) {
+export default function IsoView({ flyRef }: IsoViewProps) {
   const { filtered, mapPermits, selected, setSelected } = usePermits();
 
   const viewerRef          = useRef<HTMLDivElement>(null);
@@ -286,10 +285,6 @@ export default function IsoView({ flyRef, overlayOn = true }: IsoViewProps) {
     return () => { heliActiveRef.current = false; clearInterval(iv); };
   }, [placeHelicopters]);
 
-  // Keep overlayOn in a ref so placeMarkers closure always reads the latest value
-  const overlayOnRef = useRef(overlayOn);
-  useEffect(() => { overlayOnRef.current = overlayOn; }, [overlayOn]);
-
   // Place permit markers
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
@@ -298,7 +293,7 @@ export default function IsoView({ flyRef, overlayOn = true }: IsoViewProps) {
     if (markerRafRef.current !== null) cancelAnimationFrame(markerRafRef.current);
     overlayMarkersRef.current.forEach(el => viewer.removeOverlay(el));
     overlayMarkersRef.current.clear();
-    if (!overlayOnRef.current || mapPermits.length === 0) return;
+    if (mapPermits.length === 0) return;
     const opacities = computeOpacities(mapPermits);
     const CHUNK = 50; let i = 0;
     const addChunk = () => {
@@ -344,7 +339,7 @@ export default function IsoView({ flyRef, overlayOn = true }: IsoViewProps) {
     markerDebounceRef.current = setTimeout(placeMarkers, 300);
     return () => { if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dziLoaded, overlayOn, mapPermits]); // placeMarkers is stable via useCallback
+  }, [dziLoaded, mapPermits]); // placeMarkers is stable via useCallback
 
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;
