@@ -70,25 +70,38 @@ export async function searchPermits(query: string, limit = 2000): Promise<Permit
   let workWhere: string;
   let jobWhere:  string;
 
+  // Build queries using URL + URLSearchParams — the browser won't double-encode
+  // because URLSearchParams owns the encoding end-to-end
+  let workWhereSQL: string;
+  let jobWhereSQL:  string;
+
   if (addrMatch) {
     const houseNo    = addrMatch[1];
     const streetWord = addrMatch[2].split(' ')[0];
-    workWhere = `house_no=%27${houseNo}%27+AND+upper(street_name)+LIKE+%27${streetWord}%25%27+AND+latitude+IS+NOT+NULL`;
-    jobWhere  = `house_no=%27${houseNo}%27+AND+upper(street_name)+LIKE+%27${streetWord}%25%27+AND+latitude+IS+NOT+NULL`;
+    workWhereSQL = `house_no='${houseNo}' AND upper(street_name) LIKE '${streetWord}%' AND latitude IS NOT NULL`;
+    jobWhereSQL  = `house_no='${houseNo}' AND upper(street_name) LIKE '${streetWord}%' AND latitude IS NOT NULL`;
   } else {
-    // Encode the search term, but keep alphanumeric and space (encoded as %20)
-    const esc = q.replace(/[^A-Z0-9 ]/g, '').replace(/ /g, '%20');
-    workWhere = `(upper(street_name)+LIKE+%27%25${esc}%25%27+OR+upper(job_description)+LIKE+%27%25${esc}%25%27+OR+upper(owner_business_name)+LIKE+%27%25${esc}%25%27+OR+upper(applicant_business_name)+LIKE+%27%25${esc}%25%27)+AND+latitude+IS+NOT+NULL`;
-    jobWhere  = `(upper(street_name)+LIKE+%27%25${esc}%25%27+OR+upper(job_description)+LIKE+%27%25${esc}%25%27)+AND+latitude+IS+NOT+NULL`;
+    const esc = q.replace(/'/g, "''"); // SQL escape only
+    workWhereSQL = `(upper(street_name) LIKE '%${esc}%' OR upper(job_description) LIKE '%${esc}%' OR upper(owner_business_name) LIKE '%${esc}%' OR upper(applicant_business_name) LIKE '%${esc}%') AND latitude IS NOT NULL`;
+    jobWhereSQL  = `(upper(street_name) LIKE '%${esc}%' OR upper(job_description) LIKE '%${esc}%') AND latitude IS NOT NULL`;
   }
 
-  const workQuery = `$order=issued_date+DESC&$limit=${limit}&$where=${workWhere}`;
-  const jobQuery  = `$order=approved_date+DESC&$limit=200&$where=job_type+IN(%27New%20Building%27,%27Full%20Demolition%27)+AND+${jobWhere}`;
+  // URLSearchParams handles all percent-encoding correctly for browser fetch
+  const workParams = new URLSearchParams([
+    ['$order', 'issued_date DESC'],
+    ['$limit', String(limit)],
+    ['$where', workWhereSQL],
+  ]);
+  const jobParams = new URLSearchParams([
+    ['$order', 'approved_date DESC'],
+    ['$limit', '200'],
+    ['$where', `job_type IN('New Building','Full Demolition') AND ${jobWhereSQL}`],
+  ]);
 
-  // Hit Socrata directly — CORS is open, bypasses Vite proxy encoding issues
+  // Hit Socrata directly — CORS is open (*), no proxy needed
   const [workRes, jobRes] = await Promise.all([
-    fetch(`${SOCRATA_PERMITS}?${workQuery}`, { cache: 'no-store' }),
-    fetch(`${SOCRATA_JOBS}?${jobQuery}`,     { cache: 'no-store' }),
+    fetch(`${SOCRATA_PERMITS}?${workParams}`, { cache: 'no-store' }),
+    fetch(`${SOCRATA_JOBS}?${jobParams}`,     { cache: 'no-store' }),
   ]);
 
   if (!workRes.ok) throw new Error(`Search API ${workRes.status}`);

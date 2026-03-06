@@ -337,14 +337,16 @@ export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, se
     markerRafRef.current = requestAnimationFrame(addChunk);
   }, [mapPermits, setSelected]);
 
-  // Debounce marker placement — don't re-render on every keystroke
+  // Single debounce ref — any dependency change resets the same timer
   const markerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!dziLoaded) return;
+    // Always cancel the pending timer — only one placeMarkers call wins
     if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current);
-    markerDebounceRef.current = setTimeout(() => { placeMarkers(); }, 300);
+    markerDebounceRef.current = setTimeout(placeMarkers, 300);
     return () => { if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current); };
-  }, [dziLoaded, placeMarkers, overlayOn, mapPermits]); // mapPermits change triggers re-place
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dziLoaded, overlayOn, mapPermits]); // placeMarkers is stable via useCallback
 
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;
