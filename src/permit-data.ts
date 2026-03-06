@@ -68,13 +68,14 @@ export async function searchPermits(query: string, limit = 2000): Promise<Permit
 
   if (addrMatch) {
     const houseNo    = addrMatch[1];
-    const streetWord = addrMatch[2].replace(/'/g, "''").split(' ')[0];
-    workWhere = `house_no='${houseNo}'+AND+upper(street_name)+LIKE+'${streetWord}%25'+AND+latitude+IS+NOT+NULL`;
-    jobWhere  = `house_no='${houseNo}'+AND+upper(street_name)+LIKE+'${streetWord}%25'+AND+latitude+IS+NOT+NULL`;
+    const streetWord = addrMatch[2].split(' ')[0];
+    workWhere = `house_no=%27${houseNo}%27+AND+upper(street_name)+LIKE+%27${streetWord}%25%27+AND+latitude+IS+NOT+NULL`;
+    jobWhere  = `house_no=%27${houseNo}%27+AND+upper(street_name)+LIKE+%27${streetWord}%25%27+AND+latitude+IS+NOT+NULL`;
   } else {
-    const esc = encodeURIComponent(q.replace(/'/g, "''")).replace(/%27/g, "'");
-    workWhere = `(upper(street_name)+LIKE+'%25${esc}%25'+OR+upper(job_description)+LIKE+'%25${esc}%25'+OR+upper(owner_business_name)+LIKE+'%25${esc}%25'+OR+upper(applicant_business_name)+LIKE+'%25${esc}%25')+AND+latitude+IS+NOT+NULL`;
-    jobWhere  = `(upper(street_name)+LIKE+'%25${esc}%25'+OR+upper(job_description)+LIKE+'%25${esc}%25')+AND+latitude+IS+NOT+NULL`;
+    // Encode the search term, but keep alphanumeric and space (encoded as %20)
+    const esc = q.replace(/[^A-Z0-9 ]/g, '').replace(/ /g, '%20');
+    workWhere = `(upper(street_name)+LIKE+%27%25${esc}%25%27+OR+upper(job_description)+LIKE+%27%25${esc}%25%27+OR+upper(owner_business_name)+LIKE+%27%25${esc}%25%27+OR+upper(applicant_business_name)+LIKE+%27%25${esc}%25%27)+AND+latitude+IS+NOT+NULL`;
+    jobWhere  = `(upper(street_name)+LIKE+%27%25${esc}%25%27+OR+upper(job_description)+LIKE+%27%25${esc}%25%27)+AND+latitude+IS+NOT+NULL`;
   }
 
   const workQuery = `$order=issued_date+DESC&$limit=${limit}&$where=${workWhere}`;
