@@ -350,10 +350,10 @@ export default function App() {
     });
     // Enforce minimum helicopter size — OSD shrinks overlays proportional to 1/zoom.
     // We counter-scale to maintain a minimum visible pixel size.
-    const MIN_HELI_PX = 24; // bumped up for mobile readability
+    const MIN_HELI_PX = 12;
     viewer.addHandler('zoom', () => {
       const zoom = viewer.viewport.getZoom();
-      const effectiveSize = 14 * (HELI_BASE_ZOOM / zoom);
+      const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
       const s = effectiveSize < MIN_HELI_PX ? MIN_HELI_PX / effectiveSize : 1;
       // Set scale on the .heli-scale inner div — OSD can't touch it
       heliOverlaysRef.current.forEach(el => {
@@ -433,13 +433,15 @@ export default function App() {
         const el = existing.get(h.hex)!;
         // Flip inner span based on heading: west-ish = face left, east-ish = face right
         const flipSpan = el.querySelector('.heli-flip') as HTMLElement;
-        if (flipSpan) flipSpan.style.transform = (h.track > 90 && h.track < 270) ? 'scaleX(-1)' : '';
+        // 🚁 emoji faces LEFT natively on Apple. Flip when heading right (east).
+        if (flipSpan) flipSpan.style.transform = (h.track > 90 && h.track < 270) ? '' : 'scaleX(-1)';
       } else {
         const el = document.createElement('div');
         el.className = 'heli-marker';
-        const facingLeft = h.track > 90 && h.track < 270;
+        // 🚁 emoji faces LEFT natively on Apple. Flip when heading right (east).
+        const facingRight = !(h.track > 90 && h.track < 270);
         // Structure: .heli-marker > .heli-scale (zoom compensation) > .heli-flip (direction)
-        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:14px;${facingLeft ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
+        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingRight ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
         const point = new OpenSeadragon.Point(toX, toY);
         viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
         existing.set(h.hex, el);
@@ -449,8 +451,8 @@ export default function App() {
 
     // Apply current zoom scale to newly placed/updated helis
     const zoom = viewer.viewport.getZoom();
-    const effectiveSize = 14 * (HELI_BASE_ZOOM / zoom);
-    const s = effectiveSize < 24 ? 24 / effectiveSize : 1;
+    const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
+    const s = effectiveSize < 12 ? 12 / effectiveSize : 1;
     existing.forEach(el => {
       const scaleDiv = el.querySelector('.heli-scale') as HTMLElement;
       if (scaleDiv) scaleDiv.style.transform = `scale(${s})`;
