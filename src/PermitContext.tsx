@@ -44,7 +44,8 @@ export interface PermitContextValue {
   setSearch:      (s: string) => void;
 
   filtered:       Permit[];   // full filtered list — for sidebar
-  mapPermits:     Permit[];   // capped at MAP_LIMIT — for dot rendering
+  mapPermits:     Permit[];   // capped at dotLimit — for dot rendering
+  dotLimit:       number;     // active cap (ISO_LIMIT or MAP_LIMIT)
 
   selected:       Permit | null;
   setSelected:    (p: Permit | null) => void;
@@ -52,8 +53,9 @@ export interface PermitContextValue {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const LIST_LIMIT = 10_000;  // max fetched from API (covers any realistic date range)
-const MAP_LIMIT  = 2_000;   // max dots rendered on map (performance cap)
+const LIST_LIMIT = 10_000;  // max fetched from API
+const ISO_LIMIT  = 1_200;   // OSD overlays are expensive — keep iso snappy
+const MAP_LIMIT  = 2_400;   // MapLibre GL points are cheap, higher cap fine
 
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function daysAgoStr(n: number) {
@@ -153,11 +155,13 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     return r;
   }, [searchMode, searchResults, allPermits, jobTypes, boroughs]);
 
-  // Map cap — most recent first, hard capped at MAP_LIMIT
+  // View-specific cap — iso uses OSD overlays (expensive), map uses GL points (cheap)
+  const dotLimit  = view === 'iso' ? ISO_LIMIT : MAP_LIMIT;
   const mapPermits = useMemo(() => {
-    if (filtered.length <= MAP_LIMIT) return filtered;
-    return filtered.slice(0, MAP_LIMIT); // already sorted DESC by issued_date from API
-  }, [filtered]);
+    if (filtered.length <= dotLimit) return filtered;
+    return filtered.slice(0, dotLimit);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, dotLimit]);
 
   // Selection
   const [selected, setSelected] = useState<Permit | null>(null);
@@ -185,6 +189,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
       setSearch,
       filtered,
       mapPermits,
+      dotLimit,
       selected, setSelected,
     }}>
       {children}

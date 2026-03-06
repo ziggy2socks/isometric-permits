@@ -27,7 +27,7 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
   const {
     view, setView,
     filters, loading, searching, error, searchMode,
-    filtered, mapPermits,
+    filtered, mapPermits, dotLimit,
     setDateFrom, setDateTo,
     toggleJobType, setAllJobTypes, setNoJobTypes,
     toggleBorough, setSearch,
@@ -79,9 +79,9 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
             <>
               {searchMode && <span className="ps-search-badge">SEARCH</span>}
               <span className="ps-count">{filtered.length.toLocaleString()} permits</span>
-              {mapPermits.length < filtered.length && (
-                <span className="ps-limit-warn" title="Tighten filters to see all results on the map.">
-                  ⚠ map {mapPermits.length.toLocaleString()}
+              {filtered.length > dotLimit && (
+                <span className="ps-limit-warn" title="Tighten filters to see all on the map.">
+                  ⚠ showing {dotLimit.toLocaleString()}
                 </span>
               )}
             </>
