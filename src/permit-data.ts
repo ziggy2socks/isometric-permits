@@ -21,13 +21,13 @@ export async function fetchPermits(
   const workQuery = [
     `$order=issued_date+DESC`,
     `$limit=${limit}`,
-    `$where=issued_date+>=+'${fromStr}'+AND+issued_date+<+'${toStr}'+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL`,
+    `$where=issued_date+>=%27${fromStr}%27+AND+issued_date+<%27${toStr}%27+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL`,
   ].join('&');
 
   const jobQuery = [
     `$order=approved_date+DESC`,
     `$limit=${Math.max(100, Math.round(limit * 0.15))}`,
-    `$where=job_type+IN('New+Building','Full+Demolition')+AND+latitude+IS+NOT+NULL+AND+approved_date+>=+'${fromStr}'+AND+approved_date+<+'${toStr}'`,
+    `$where=job_type+IN(%27New+Building%27,%27Full+Demolition%27)+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27`,
   ].join('&');
 
   const [workRes, jobRes] = await Promise.all([
@@ -61,32 +61,40 @@ export async function searchPermits(query: string, limit = 2000): Promise<Permit
   // Try to split "123 WEST 57TH" → house_no=123, street fragment=WEST 57TH
   const addrMatch = q.match(/^(\d+)\s+(.+)$/);
 
-  // Build query using URLSearchParams so encoding is handled correctly by the proxy
+  // Build query strings manually — same pattern as fetchPermits
+  // URLSearchParams encodes $ → %24 which breaks Socrata's $where/$order/$limit params
   let workWhere: string;
   let jobWhere:  string;
 
   if (addrMatch) {
     const houseNo    = addrMatch[1];
     const streetWord = addrMatch[2].replace(/'/g, "''").split(' ')[0];
-    workWhere = `house_no='${houseNo}' AND upper(street_name) LIKE '${streetWord}%' AND latitude IS NOT NULL`;
-    jobWhere  = `house_no='${houseNo}' AND upper(street_name) LIKE '${streetWord}%' AND latitude IS NOT NULL`;
+    workWhere = `house_no='${houseNo}'+AND+upper(street_name)+LIKE+'${streetWord}%25'+AND+latitude+IS+NOT+NULL`;
+    jobWhere  = `house_no='${houseNo}'+AND+upper(street_name)+LIKE+'${streetWord}%25'+AND+latitude+IS+NOT+NULL`;
   } else {
-    const esc = q.replace(/'/g, "''");
-    workWhere = `(upper(street_name) LIKE '%${esc}%' OR upper(job_description) LIKE '%${esc}%' OR upper(owner_business_name) LIKE '%${esc}%' OR upper(applicant_business_name) LIKE '%${esc}%') AND latitude IS NOT NULL`;
-    jobWhere  = `(upper(street_name) LIKE '%${esc}%' OR upper(job_description) LIKE '%${esc}%') AND latitude IS NOT NULL`;
+    const esc = encodeURIComponent(q.replace(/'/g, "''")).replace(/%27/g, "'");
+    workWhere = `(upper(street_name)+LIKE+'%25${esc}%25'+OR+upper(job_description)+LIKE+'%25${esc}%25'+OR+upper(owner_business_name)+LIKE+'%25${esc}%25'+OR+upper(applicant_business_name)+LIKE+'%25${esc}%25')+AND+latitude+IS+NOT+NULL`;
+    jobWhere  = `(upper(street_name)+LIKE+'%25${esc}%25'+OR+upper(job_description)+LIKE+'%25${esc}%25')+AND+latitude+IS+NOT+NULL`;
   }
 
-  const workParams = new URLSearchParams({ $order: 'issued_date DESC', $limit: String(limit), $where: workWhere });
-  const jobParams  = new URLSearchParams({ $order: 'approved_date DESC', $limit: '200', $where: `job_type IN('New Building','Full Demolition') AND ${jobWhere}` });
-  const workQuery  = workParams.toString();
-  const jobQuery   = jobParams.toString();
+  const workQuery = `$order=issued_date+DESC&$limit=${limit}&$where=${workWhere}`;
+  const jobQuery  = `$order=approved_date+DESC&$limit=200&$where=job_type+IN(%27New+Building%27,%27Full+Demolition%27)+AND+${jobWhere}`;
+
+  const workUrl = `${PERMITS_BASE}?${workQuery}`;
+  const jobUrl  = `${JOBS_BASE}?${jobQuery}`;
+  console.log('[search] workUrl:', workUrl);
+  console.log('[search] jobUrl:', jobUrl);
 
   const [workRes, jobRes] = await Promise.all([
-    fetch(`${PERMITS_BASE}?${workQuery}`, { cache: 'no-store' }),
-    fetch(`${JOBS_BASE}?${jobQuery}`, { cache: 'no-store' }),
+    fetch(workUrl, { cache: 'no-store' }),
+    fetch(jobUrl,  { cache: 'no-store' }),
   ]);
 
-  if (!workRes.ok) throw new Error(`Search API ${workRes.status}`);
+  if (!workRes.ok) {
+    const body = await workRes.text().catch(() => '');
+    console.error('[search] work 400 body:', body);
+    throw new Error(`Search API ${workRes.status}`);
+  }
   if (!jobRes.ok)  throw new Error(`Search API ${jobRes.status}`);
 
   const workRaw: Permit[] = await workRes.json();
