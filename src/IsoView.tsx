@@ -254,7 +254,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         el = document.createElement('div');
         el.className = 'heli-marker';
         el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
-        viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
+        // checkResize:false prevents OSD from scaling the element with zoom
+        viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
         existing.set(hex, el);
         positions.set(hex, { fromX: vpX, fromY: vpY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
       } else {
@@ -265,7 +266,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         const curY = cur.fromY + (cur.toY - cur.fromY) * t;
         positions.set(hex, { fromX: curX, fromY: curY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
       }
-      el.innerHTML = `<span style="display:inline-block;transform:rotate(${track}deg);font-size:14px">🚁</span>`;
+      el.innerHTML = `<span style="display:inline-block;transform:rotate(${track}deg);font-size:22px">🚁</span>`;
       el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
     }
     for (const [hex, el] of existing) {
