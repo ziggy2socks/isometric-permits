@@ -347,6 +347,22 @@ export default function App() {
       viewer.viewport.panTo(new OpenSeadragon.Point(0.3637, 0.3509), true);
       viewer.viewport.zoomTo(window.innerWidth <= 768 ? 10 : 3.5, undefined, true);
     });
+    // Enforce minimum helicopter size — counter-scale above base zoom
+    const BASE_ZOOM = 3.5;
+    viewer.addHandler('zoom', () => {
+      const zoom = viewer.viewport.getZoom();
+      if (zoom > BASE_ZOOM) {
+        const scale = Math.max(1, zoom / BASE_ZOOM * 0.6);
+        heliOverlaysRef.current.forEach(el => {
+          el.style.transform = `scale(${scale})`;
+        });
+      } else {
+        heliOverlaysRef.current.forEach(el => {
+          el.style.transform = '';
+        });
+      }
+    });
+
     osdRef.current = viewer;
     return () => {
       labelsRef.current?.destroy();

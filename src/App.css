@@ -230,7 +230,7 @@ html, body, #root {
   position: relative;
   z-index: 100;
   filter: drop-shadow(0 0 3px rgba(0,0,0,0.9));
-  transition: transform 10s linear;
+  transform-origin: center center;
 }
 
 /* Custom scrollbar for the virtual list */
