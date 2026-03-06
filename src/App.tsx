@@ -23,6 +23,7 @@ const TILE_BASE = '/dzi/tiles_files';
 const DZI_DIMENSIONS = { width: 123904, height: 100864 };
 const MAX_LEVEL = 8;
 const TILE_SIZE = 512;
+const HELI_BASE_ZOOM = 3.5; // zoom level where heli size looks good — counter-scale above this
 
 function buildTileSource() {
   const osdMaxLevel = Math.ceil(Math.log2(Math.max(DZI_DIMENSIONS.width, DZI_DIMENSIONS.height)));
@@ -348,19 +349,14 @@ export default function App() {
       viewer.viewport.zoomTo(window.innerWidth <= 768 ? 10 : 3.5, undefined, true);
     });
     // Enforce minimum helicopter size — counter-scale above base zoom
-    const BASE_ZOOM = 3.5;
+    // Preserves directional scaleX mirror stored in data-flip attribute
     viewer.addHandler('zoom', () => {
       const zoom = viewer.viewport.getZoom();
-      if (zoom > BASE_ZOOM) {
-        const scale = Math.max(1, zoom / BASE_ZOOM * 0.6);
-        heliOverlaysRef.current.forEach(el => {
-          el.style.transform = `scale(${scale})`;
-        });
-      } else {
-        heliOverlaysRef.current.forEach(el => {
-          el.style.transform = '';
-        });
-      }
+      const scale = zoom > HELI_BASE_ZOOM ? zoom / HELI_BASE_ZOOM : 1;
+      heliOverlaysRef.current.forEach(el => {
+        const flip = el.dataset.flip === '1' ? -1 : 1;
+        el.style.transform = `scale(${scale * flip}, ${scale})`;
+      });
     });
 
     osdRef.current = viewer;
@@ -432,17 +428,25 @@ export default function App() {
         positions.set(h.hex, { fromX: curX, fromY: curY, toX, toY, startTime: now, duration: POLL_MS });
         // Update rotation immediately
         const el = existing.get(h.hex)!;
-        el.style.transform = h.track > 90 && h.track < 270 ? '' : 'scaleX(-1)';
+        el.dataset.flip = (h.track > 90 && h.track < 270) ? '0' : '1';
       } else {
         const el = document.createElement('div');
         el.className = 'heli-marker';
         el.textContent = '🚁';
-        el.style.transform = h.track > 90 && h.track < 270 ? '' : 'scaleX(-1)';
+        el.dataset.flip = (h.track > 90 && h.track < 270) ? '0' : '1';
         const point = new OpenSeadragon.Point(toX, toY);
         viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
         existing.set(h.hex, el);
         positions.set(h.hex, { fromX: toX, fromY: toY, toX, toY, startTime: now, duration: POLL_MS });
       }
+    });
+
+    // Apply current zoom scale + flip to newly placed/updated helis
+    const zoom = viewer.viewport.getZoom();
+    const curScale = zoom > HELI_BASE_ZOOM ? zoom / HELI_BASE_ZOOM : 1;
+    existing.forEach(el => {
+      const flip = el.dataset.flip === '1' ? -1 : 1;
+      el.style.transform = `scale(${curScale * flip}, ${curScale})`;
     });
 
     // Start RAF loop if not already running
