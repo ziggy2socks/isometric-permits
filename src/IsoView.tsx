@@ -108,6 +108,20 @@ function PermitDrawer({ permit, onClose }: { permit: Permit; onClose: () => void
       {permit.bin    && <DrawerField label="BIN"         value={permit.bin} mono />}
       {permit.job_filing_number && <DrawerField label="FILING #" value={permit.job_filing_number} mono />}
       <div className="drawer-divider" />
+      <div className="drawer-links">
+        {permit.bin && (
+          <a className="drawer-link" href={`https://a810-bisweb.nyc.gov/bisweb/PropertyProfileOverviewServlet?bin=${permit.bin}`} target="_blank" rel="noopener noreferrer">🏛 DOB BIS</a>
+        )}
+        {permit.bbl && (
+          <a className="drawer-link" href={`https://zola.planning.nyc.gov/l/lot/${permit.bbl.slice(0,1)}/${permit.bbl.slice(1,6)}/${permit.bbl.slice(6)}`} target="_blank" rel="noopener noreferrer">🗺 ZoLa</a>
+        )}
+        {permit.latitude && permit.longitude && (
+          <a className="drawer-link" href={`https://www.google.com/maps?q=${permit.latitude},${permit.longitude}`} target="_blank" rel="noopener noreferrer">📍 Maps</a>
+        )}
+        {permit.latitude && permit.longitude && (
+          <a className="drawer-link" href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${permit.latitude},${permit.longitude}`} target="_blank" rel="noopener noreferrer">🚶 Street View</a>
+        )}
+      </div>
       <div className="drawer-footer">NYC DOB NOW: Build</div>
     </div>
   );

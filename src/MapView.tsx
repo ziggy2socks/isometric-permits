@@ -161,6 +161,21 @@ export default function MapView() {
           <DR label="Applicant"  value={selected.applicant_business_name || [selected.applicant_first_name, selected.applicant_last_name].filter(Boolean).join(' ')} />
           <DR label="Expires"    value={formatDate(selected.expired_date)} />
           <DR label="Filing #"   value={selected.job_filing_number} mono />
+          <div className="map-detail-divider" />
+          <div className="drawer-links">
+            {selected.bin && (
+              <a className="drawer-link" href={`https://a810-bisweb.nyc.gov/bisweb/PropertyProfileOverviewServlet?bin=${selected.bin}`} target="_blank" rel="noopener noreferrer">🏛 DOB BIS</a>
+            )}
+            {selected.bbl && (
+              <a className="drawer-link" href={`https://zola.planning.nyc.gov/l/lot/${selected.bbl.slice(0,1)}/${selected.bbl.slice(1,6)}/${selected.bbl.slice(6)}`} target="_blank" rel="noopener noreferrer">🗺 ZoLa</a>
+            )}
+            {selected.latitude && selected.longitude && (
+              <a className="drawer-link" href={`https://www.google.com/maps?q=${selected.latitude},${selected.longitude}`} target="_blank" rel="noopener noreferrer">📍 Maps</a>
+            )}
+            {selected.latitude && selected.longitude && (
+              <a className="drawer-link" href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${selected.latitude},${selected.longitude}`} target="_blank" rel="noopener noreferrer">🚶 Street View</a>
+            )}
+          </div>
         </div>
       )}
     </div>
