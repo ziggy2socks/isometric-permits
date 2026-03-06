@@ -221,6 +221,23 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       viewer.viewport.panTo(new OpenSeadragon.Point(0.3637, 0.3509), true);
       viewer.viewport.zoomTo(window.innerWidth <= 768 ? 10 : 3.5, undefined, true);
     });
+    // Enforce minimum helicopter size — let OSD scale them naturally, but counter-scale
+    // when zoom exceeds a threshold so they don't shrink to invisible
+    const BASE_ZOOM = 3.5; // zoom level where heli size looks good
+    viewer.addHandler('zoom', () => {
+      const zoom = viewer.viewport.getZoom();
+      if (zoom > BASE_ZOOM) {
+        const scale = Math.max(1, zoom / BASE_ZOOM * 0.6); // counter-scale, floor at 1x
+        heliOverlaysRef.current.forEach(el => {
+          el.style.transform = `scale(${scale})`;
+        });
+      } else {
+        heliOverlaysRef.current.forEach(el => {
+          el.style.transform = '';
+        });
+      }
+    });
+
     osdRef.current = viewer;
     return () => {
       labelsRef.current?.destroy(); labelsRef.current = null;
@@ -254,8 +271,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         el = document.createElement('div');
         el.className = 'heli-marker';
         el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
-        // checkResize:false prevents OSD from scaling the element with zoom
-        viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
+        viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
         existing.set(hex, el);
         positions.set(hex, { fromX: vpX, fromY: vpY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
       } else {
@@ -266,7 +282,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         const curY = cur.fromY + (cur.toY - cur.fromY) * t;
         positions.set(hex, { fromX: curX, fromY: curY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
       }
-      el.innerHTML = `<span style="display:inline-block;transform:rotate(${track}deg);font-size:22px">🚁</span>`;
+      el.innerHTML = `<span style="display:inline-block;transform:rotate(${track}deg);font-size:14px">🚁</span>`;
       el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
     }
     for (const [hex, el] of existing) {
