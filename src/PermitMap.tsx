@@ -64,7 +64,6 @@ export default function PermitMap() {
   const [filtered, setFiltered] = useState<Permit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
   const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -129,7 +128,7 @@ export default function PermitMap() {
     try {
       const permits = await fetchPermits(dateFrom, dateTo, RESULT_LIMIT);
       setAllPermits(permits);
-      setTotalCount(permits.length); // will be overridden by count query
+      // totalCount removed — was unused
     } catch (e) {
       setError((e as Error).message);
     } finally {
