@@ -86,13 +86,21 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
 
       {/* Date range */}
       <div className="ps-section">
-        <div className="ps-section-label">DATE RANGE</div>
+        <div className="ps-section-label-row">
+          <span className="ps-section-label">DATE RANGE</span>
+          <button className="ps-reset-btn" title="Reset to last 7 days"
+            onClick={() => {
+              const d = new Date(); d.setDate(d.getDate() - 7);
+              setDateFrom(d.toISOString().split('T')[0]);
+              setDateTo(todayStr);
+            }}>↺ 7d</button>
+        </div>
         <div className="ps-date-row">
           <input type="date" className="ps-date-input" value={filters.dateFrom}
-            onChange={e => setDateFrom(e.target.value)} max={filters.dateTo} />
+            onChange={e => setDateFrom(e.target.value)} />
           <span className="ps-date-sep">→</span>
           <input type="date" className="ps-date-input" value={filters.dateTo}
-            onChange={e => setDateTo(e.target.value)} min={filters.dateFrom} max={todayStr} />
+            onChange={e => setDateTo(e.target.value)} max={todayStr} />
         </div>
         <div className="ps-quick-dates">
           {quickDates.map(({ label, days }) => {

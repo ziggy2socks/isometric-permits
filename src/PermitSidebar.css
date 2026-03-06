@@ -115,6 +115,30 @@
   flex-shrink: 0;
 }
 
+.ps-section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.ps-reset-btn {
+  background: transparent;
+  border: 1px solid rgba(0,200,255,0.2);
+  color: var(--pp-cyan);
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.ps-reset-btn:hover {
+  border-color: var(--pp-cyan);
+  background: rgba(0,200,255,0.08);
+}
+
 .ps-section-label {
   font-size: 9px;
   font-weight: bold;
