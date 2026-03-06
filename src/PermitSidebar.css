@@ -378,7 +378,7 @@
     border-top: 1px solid var(--pp-border);
     transform: translateY(100%);
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 50;
+    z-index: 160;  /* above neighborhood labels (80) and backdrop (149) */
     box-shadow: 0 -8px 40px rgba(0,200,255,0.08);
   }
   .ps-sidebar--open { transform: translateY(0); }
