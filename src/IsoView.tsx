@@ -155,11 +155,9 @@ function PermitRow({ index, style, data }: ListChildComponentProps) {
 interface IsoViewProps {
   flyRef?: React.MutableRefObject<((p: Permit) => void) | null>;
   overlayOn?: boolean;
-  infoOpen?: boolean;
-  setInfoOpen?: (v: boolean) => void;
 }
 
-export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, setInfoOpen }: IsoViewProps) {
+export default function IsoView({ flyRef, overlayOn = true }: IsoViewProps) {
   const { filtered, mapPermits, selected, setSelected } = usePermits();
 
   const viewerRef          = useRef<HTMLDivElement>(null);
@@ -414,34 +412,7 @@ export default function IsoView({ flyRef, overlayOn = true, infoOpen = false, se
       )}
 
       {/* Info modal */}
-      {infoOpen && setInfoOpen && (
-        <div className="info-backdrop" onClick={() => setInfoOpen(false)}>
-          <div className="info-modal" onClick={e => e.stopPropagation()}>
-            <div className="info-header">
-              <span className="info-title">NYC PERMIT PULSE</span>
-              <button className="info-close" onClick={() => setInfoOpen?.(false)}>✕</button>
-            </div>
-            <div className="info-body">
-              <p>A live overlay of NYC DOB permit activity on the isometric pixel-art map by <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>.</p>
-              <p>Each dot represents an active permit — color-coded by type. Click any dot to see details, or use the sidebar to filter.</p>
-              <div className="info-legend">
-                {['NB','DM','GC','PL','ME','SOL','SHD','SCF'].map(jt => (
-                  <div key={jt} className="info-legend-row">
-                    <span className="info-legend-dot" style={{ background: getJobColor(jt) }} />
-                    <span>{getJobLabel(jt)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="info-links">
-                <a href="https://github.com/ziggy2socks/isometric-permits" target="_blank" rel="noopener noreferrer">★ GitHub</a>
-                <a href="https://opendata.cityofnewyork.us" target="_blank" rel="noopener noreferrer">NYC Open Data</a>
-                <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>
-              </div>
-              <p className="info-note">Data sourced from NYC Open Data · DOB publishes with a 2–5 day lag</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Info modal rendered in AppShell so it works in both iso and map views */}
 
       {/* Hover tooltip */}
       {tooltip && (
