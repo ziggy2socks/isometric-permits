@@ -53,6 +53,10 @@ export async function fetchPermits(
 }
 
 // ── Address / keyword search (full DB, no date filter) ───────────────────────
+// Hits Socrata directly — CORS is open (*), bypasses Vite proxy encoding issues
+
+const SOCRATA_PERMITS = 'https://data.cityofnewyork.us/resource/rbx6-tga4.json';
+const SOCRATA_JOBS    = 'https://data.cityofnewyork.us/resource/w9ak-ipjd.json';
 
 export async function searchPermits(query: string, limit = 2000): Promise<Permit[]> {
   const q = query.trim().toUpperCase();
@@ -81,21 +85,13 @@ export async function searchPermits(query: string, limit = 2000): Promise<Permit
   const workQuery = `$order=issued_date+DESC&$limit=${limit}&$where=${workWhere}`;
   const jobQuery  = `$order=approved_date+DESC&$limit=200&$where=job_type+IN(%27New%20Building%27,%27Full%20Demolition%27)+AND+${jobWhere}`;
 
-  const workUrl = `${PERMITS_BASE}?${workQuery}`;
-  const jobUrl  = `${JOBS_BASE}?${jobQuery}`;
-  console.log('[search] workUrl:', workUrl);
-  console.log('[search] jobUrl:', jobUrl);
-
+  // Hit Socrata directly — CORS is open, bypasses Vite proxy encoding issues
   const [workRes, jobRes] = await Promise.all([
-    fetch(workUrl, { cache: 'no-store' }),
-    fetch(jobUrl,  { cache: 'no-store' }),
+    fetch(`${SOCRATA_PERMITS}?${workQuery}`, { cache: 'no-store' }),
+    fetch(`${SOCRATA_JOBS}?${jobQuery}`,     { cache: 'no-store' }),
   ]);
 
-  if (!workRes.ok) {
-    const body = await workRes.text().catch(() => '');
-    console.error('[search] work 400 body:', body);
-    throw new Error(`Search API ${workRes.status}`);
-  }
+  if (!workRes.ok) throw new Error(`Search API ${workRes.status}`);
   if (!jobRes.ok)  throw new Error(`Search API ${jobRes.status}`);
 
   const workRaw: Permit[] = await workRes.json();
