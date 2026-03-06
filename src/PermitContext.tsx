@@ -8,7 +8,7 @@
  */
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import type { Permit } from './types';
-import { fetchPermits, ALL_JOB_TYPES, ALL_BOROUGHS, workTypeToCode } from './permit-data';
+import { fetchPermits, searchPermits, ALL_JOB_TYPES, ALL_BOROUGHS, workTypeToCode } from './permit-data';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -28,8 +28,10 @@ export interface PermitContextValue {
 
   allPermits:     Permit[];
   loading:        boolean;
+  searching:      boolean;    // true when a search query is in-flight
   error:          string | null;
-  totalFetched:   number;     // how many the API returned (may be < LIST_LIMIT)
+  totalFetched:   number;
+  searchMode:     boolean;    // true when search query is active
   reload:         () => void;
 
   filters:        PermitFilters;
@@ -79,7 +81,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   const [boroughs, setBoroughs] = useState<Set<string>>(new Set(['MANHATTAN']));
   const [search,   setSearch]   = useState('');
 
-  // Data
+  // Data — date-range results
   const [allPermits,   setAllPermits]   = useState<Permit[]>([]);
   const [totalFetched, setTotalFetched] = useState(0);
   const [loading,      setLoading]      = useState(false);
@@ -105,9 +107,40 @@ export function PermitProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Search — separate API query, no date filter
+  const [searchResults, setSearchResults] = useState<Permit[]>([]);
+  const [searching,     setSearching]     = useState(false);
+  const searchKey = useRef(0);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    const q = search.trim();
+    if (!q) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    searchDebounce.current = setTimeout(async () => {
+      const key = ++searchKey.current;
+      try {
+        const data = await searchPermits(q, LIST_LIMIT);
+        if (key !== searchKey.current) return;
+        setSearchResults(data);
+      } catch (e) {
+        if (key !== searchKey.current) return;
+        setError((e as Error).message);
+      } finally {
+        if (key === searchKey.current) setSearching(false);
+      }
+    }, 400);
+    return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
+  }, [search]);
+
+  const searchMode = search.trim().length > 0;
+
   // Full client-side filter — for sidebar list (no cap)
+  // In search mode: use searchResults (full DB) filtered by borough+type only
+  // In normal mode: use allPermits filtered by all criteria
   const filtered = useMemo(() => {
-    let r = allPermits;
+    let r = searchMode ? searchResults : allPermits;
     if (jobTypes.size < ALL_JOB_TYPES.length) {
       r = r.filter(p => {
         const jt = p.job_type ?? workTypeToCode(p.work_type ?? '');
@@ -117,19 +150,8 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     if (boroughs.size < ALL_BOROUGHS.length) {
       r = r.filter(p => boroughs.has((p.borough ?? '').toUpperCase()));
     }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      r = r.filter(p =>
-        (p.house_no ?? '').toLowerCase().includes(q) ||
-        (p.street_name ?? '').toLowerCase().includes(q) ||
-        (p.borough ?? '').toLowerCase().includes(q) ||
-        (p.job_description ?? '').toLowerCase().includes(q) ||
-        (p.owner_business_name ?? '').toLowerCase().includes(q) ||
-        (p.applicant_business_name ?? '').toLowerCase().includes(q)
-      );
-    }
     return r;
-  }, [allPermits, jobTypes, boroughs, search]);
+  }, [searchMode, searchResults, allPermits, jobTypes, boroughs]);
 
   // Map cap — most recent first, hard capped at MAP_LIMIT
   const mapPermits = useMemo(() => {
@@ -155,7 +177,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   return (
     <PermitContext.Provider value={{
       view, setView,
-      allPermits, loading, error, totalFetched, reload: load,
+      allPermits, loading, searching, error, totalFetched, searchMode, reload: load,
       filters,
       setDateFrom, setDateTo,
       toggleJobType, setAllJobTypes, setNoJobTypes,

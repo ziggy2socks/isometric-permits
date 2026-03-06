@@ -26,13 +26,14 @@ interface Props {
 export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClose, headerActions }: Props) {
   const {
     view, setView,
-    filters, loading, error,
+    filters, loading, searching, error, searchMode,
     filtered, mapPermits,
     setDateFrom, setDateTo,
     toggleJobType, setAllJobTypes, setNoJobTypes,
     toggleBorough, setSearch,
     selected, setSelected,
   } = usePermits();
+  const isLoading = loading || searching;
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -67,16 +68,20 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
             title="Map view">MAP VIEW</button>
         </div>
         <div className="ps-count-row">
-          {loading ? (
-            <span className="ps-loading">LOADING…</span>
+          {isLoading ? (
+            <span className="ps-loading">
+              <span className="ps-spinner" />
+              {searching ? 'SEARCHING…' : 'LOADING…'}
+            </span>
           ) : error ? (
             <span className="ps-error">⚠ {error}</span>
           ) : (
             <>
+              {searchMode && <span className="ps-search-badge">SEARCH</span>}
               <span className="ps-count">{filtered.length.toLocaleString()} permits</span>
               {mapPermits.length < filtered.length && (
-                <span className="ps-limit-warn" title="Tighten filters to see all results.">
-                  ⚠ map showing {mapPermits.length.toLocaleString()}
+                <span className="ps-limit-warn" title="Tighten filters to see all results on the map.">
+                  ⚠ map {mapPermits.length.toLocaleString()}
                 </span>
               )}
             </>
@@ -157,11 +162,22 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
       </div>
 
       {/* Search */}
-      <div className="ps-section">
+      <div className="ps-section ps-section--search">
+        <div className="ps-section-label-row">
+          <span className="ps-section-label">
+            {searchMode ? '⚡ FULL DATABASE SEARCH' : 'SEARCH ALL PERMITS'}
+          </span>
+          {searchMode && (
+            <button className="ps-reset-btn" onClick={() => setSearch('')}>✕ clear</button>
+          )}
+        </div>
         <input className="ps-search"
-          placeholder="Search address, description, owner…"
+          placeholder="123 West 57th St · solar · owner name…"
           value={filters.search}
           onChange={e => setSearch(e.target.value)} />
+        {!searchMode && (
+          <div className="ps-search-hint">Any address, any date — ignores date range above</div>
+        )}
       </div>
 
       {/* Results list */}

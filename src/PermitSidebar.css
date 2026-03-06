@@ -98,7 +98,45 @@
   color: var(--pp-muted);
 }
 
-.ps-loading { font-size: 9px; letter-spacing: 1px; color: var(--pp-muted); }
+.ps-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--pp-cyan);
+}
+
+.ps-spinner {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border: 1.5px solid rgba(0,200,255,0.2);
+  border-top-color: var(--pp-cyan);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ps-search-badge {
+  font-size: 8px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  color: #0a0c14;
+  background: var(--pp-cyan);
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.ps-search-hint {
+  font-size: 9px;
+  color: var(--pp-muted);
+  margin-top: 5px;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+
+.ps-section--search { border-top: 1px solid rgba(0,200,255,0.08); padding-top: 12px; }
 .ps-error   { font-size: 9px; letter-spacing: 0.5px; color: #ff4444; }
 
 .ps-limit-warn {

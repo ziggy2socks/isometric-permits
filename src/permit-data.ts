@@ -52,6 +52,62 @@ export async function fetchPermits(
   return [...workPermits, ...jobPermits];
 }
 
+// ── Address / keyword search (full DB, no date filter) ───────────────────────
+
+export async function searchPermits(query: string, limit = 2000): Promise<Permit[]> {
+  const q = query.trim().toUpperCase();
+  if (!q) return [];
+
+  // Try to split "123 WEST 57TH" → house_no=123, street fragment=WEST 57TH
+  const addrMatch = q.match(/^(\d+)\s+(.+)$/);
+
+  let workWhere: string;
+  let jobWhere: string;
+
+  if (addrMatch) {
+    const houseNo    = addrMatch[1];
+    const streetFrag = addrMatch[2].replace(/'/g, "''");
+    workWhere = `house_no='${houseNo}'+AND+upper(street_name)+LIKE+'${streetFrag.split(' ')[0]}%'+AND+latitude+IS+NOT+NULL`;
+    jobWhere  = `house_no='${houseNo}'+AND+upper(street_name)+LIKE+'${streetFrag.split(' ')[0]}%'+AND+latitude+IS+NOT+NULL`;
+  } else {
+    // Keyword — search street_name, job_description, owner, applicant
+    const esc = q.replace(/'/g, "''");
+    workWhere = `(upper(street_name)+LIKE+'%25${esc}%25'+OR+upper(job_description)+LIKE+'%25${esc}%25'+OR+upper(owner_business_name)+LIKE+'%25${esc}%25'+OR+upper(applicant_business_name)+LIKE+'%25${esc}%25')+AND+latitude+IS+NOT+NULL`;
+    jobWhere  = `(upper(street_name)+LIKE+'%25${esc}%25'+OR+upper(job_description)+LIKE+'%25${esc}%25')+AND+latitude+IS+NOT+NULL`;
+  }
+
+  const workQuery = [`$order=issued_date+DESC`, `$limit=${limit}`, `$where=${workWhere}`].join('&');
+  const jobQuery  = [`$order=approved_date+DESC`, `$limit=200`, `$where=job_type+IN('New+Building','Full+Demolition')+AND+${jobWhere}`].join('&');
+
+  const [workRes, jobRes] = await Promise.all([
+    fetch(`${PERMITS_BASE}?${workQuery}`, { cache: 'no-store' }),
+    fetch(`${JOBS_BASE}?${jobQuery}`, { cache: 'no-store' }),
+  ]);
+
+  if (!workRes.ok) throw new Error(`Search API ${workRes.status}`);
+  if (!jobRes.ok)  throw new Error(`Search API ${jobRes.status}`);
+
+  const workRaw: Permit[] = await workRes.json();
+  const jobRaw:  Permit[] = await jobRes.json();
+
+  const workPermits = workRaw.map(p => ({ ...p, job_type: workTypeToCode(p.work_type ?? '') }));
+  const jobPermits: Permit[] = jobRaw.map(p => ({
+    ...p,
+    work_type: p.job_type,
+    job_type: p.job_type === 'New Building' ? 'NB' : 'DM',
+    issued_date: p.approved_date,
+  }));
+
+  // Dedupe by job_filing_number
+  const seen = new Set<string>();
+  return [...workPermits, ...jobPermits].filter(p => {
+    const key = p.job_filing_number ?? `${p.house_no}-${p.street_name}-${p.issued_date}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // ── Work type normalization ───────────────────────────────────────────────────
 
 export function workTypeToCode(workType: string): string {
