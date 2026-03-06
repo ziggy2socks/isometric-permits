@@ -162,7 +162,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const viewerRef          = useRef<HTMLDivElement>(null);
   const osdRef             = useRef<OpenSeadragon.Viewer | null>(null);
   const overlayMarkersRef  = useRef<Map<string, HTMLElement>>(new Map());
-  const markerGenRef       = useRef(0);
+
   const labelsRef          = useRef<NeighborhoodLabels | null>(null);
   const markerRafRef       = useRef<number | null>(null);
   const heliOverlaysRef    = useRef<Map<string, HTMLElement>>(new Map());
@@ -285,49 +285,50 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     return () => { heliActiveRef.current = false; clearInterval(iv); };
   }, [placeHelicopters]);
 
-  // Place permit markers
+  // Place permit markers — synchronous, no chunking
+  // Chunked RAF was causing ghost dots: old chunks kept adding after clear
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
     if (!viewer) return;
-    const gen = ++markerGenRef.current;
-    if (markerRafRef.current !== null) cancelAnimationFrame(markerRafRef.current);
-    overlayMarkersRef.current.forEach(el => viewer.removeOverlay(el));
+
+    // Cancel any pending RAF from a previous run
+    if (markerRafRef.current !== null) { cancelAnimationFrame(markerRafRef.current); markerRafRef.current = null; }
+
+    // Nuclear clear — remove ALL overlays with class permit-marker from OSD directly
+    // This catches any elements that slipped past overlayMarkersRef tracking
+    const allMarkerEls = viewer.element.querySelectorAll('.permit-marker');
+    allMarkerEls.forEach(el => viewer.removeOverlay(el as HTMLElement));
     overlayMarkersRef.current.clear();
+
     if (mapPermits.length === 0) return;
+
     const opacities = computeOpacities(mapPermits);
-    const CHUNK = 50; let i = 0;
-    const addChunk = () => {
-      if (gen !== markerGenRef.current) return;
-      const end = Math.min(i + CHUNK, mapPermits.length);
-      for (; i < end; i++) {
-        const permit = mapPermits[i];
-        const lat = parseFloat(permit.latitude ?? '');
-        const lng = parseFloat(permit.longitude ?? '');
-        if (isNaN(lat) || isNaN(lng)) continue;
-        const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
-        const vpX = imgX / IMAGE_DIMS.width;
-        const vpY = imgY / IMAGE_DIMS.width;
-        const el = document.createElement('div');
-        el.className = 'permit-marker';
-        const color = getJobColor(permit.job_type ?? '');
-        el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};--color:${color};opacity:${opacities.get(permit) ?? 1};cursor:pointer;pointer-events:auto;`;
-        const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${i}`;
-        el.addEventListener('mouseenter', (e) => { setTooltip({ permit, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }); });
-        el.addEventListener('mouseleave', () => setTooltip(null));
-        el.addEventListener('mousemove',  (e) => setTooltip(t => t ? { ...t, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null));
-        el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.stopImmediatePropagation(); });
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          setDrawerRef.current(permit);
-          setSelectedRef.current(permit);
-        });
-        viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
-        overlayMarkersRef.current.set(key, el);
-      }
-      if (i < mapPermits.length) markerRafRef.current = requestAnimationFrame(addChunk);
-    };
-    markerRafRef.current = requestAnimationFrame(addChunk);
+    for (let i = 0; i < mapPermits.length; i++) {
+      const permit = mapPermits[i];
+      const lat = parseFloat(permit.latitude ?? '');
+      const lng = parseFloat(permit.longitude ?? '');
+      if (isNaN(lat) || isNaN(lng)) continue;
+      const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
+      const vpX = imgX / IMAGE_DIMS.width;
+      const vpY = imgY / IMAGE_DIMS.width;
+      const el = document.createElement('div');
+      el.className = 'permit-marker';
+      const color = getJobColor(permit.job_type ?? '');
+      el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};--color:${color};opacity:${opacities.get(permit) ?? 1};cursor:pointer;pointer-events:auto;`;
+      const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${i}`;
+      el.addEventListener('mouseenter', (e) => { setTooltip({ permit, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }); });
+      el.addEventListener('mouseleave', () => setTooltip(null));
+      el.addEventListener('mousemove',  (e) => setTooltip(t => t ? { ...t, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null));
+      el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.stopImmediatePropagation(); });
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        setDrawerRef.current(permit);
+        setSelectedRef.current(permit);
+      });
+      viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
+      overlayMarkersRef.current.set(key, el);
+    }
   }, [mapPermits, setSelected]);
 
   // Single debounce ref — any dependency change resets the same timer
