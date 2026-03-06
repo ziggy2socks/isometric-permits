@@ -306,6 +306,28 @@
 .ps-search:focus { border-color: var(--pp-cyan); }
 .ps-search::placeholder { color: var(--pp-muted); }
 
+/* ── Body wrapper — filters + results ── */
+.ps-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .ps-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* On mobile the whole body scrolls, so ps-list doesn't need its own scroll */
+  .ps-body .ps-list {
+    flex: none;
+    overflow-y: visible;
+    max-height: none;
+  }
+}
+
 /* ── Results list ── */
 .ps-list {
   flex: 1;

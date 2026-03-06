@@ -89,6 +89,8 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
         </div>
       </div>
 
+      {/* Scrollable body — filters + results */}
+      <div className="ps-body">
       {/* Date range */}
       <div className="ps-section">
         <div className="ps-section-label-row">
@@ -219,6 +221,7 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
           <div className="ps-empty">No permits match filters</div>
         )}
       </div>
+      </div> {/* end ps-body */}
     </div>
   );
 }
