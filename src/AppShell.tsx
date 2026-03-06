@@ -15,8 +15,8 @@ import './AppShell.css';
 export default function AppShell() {
   const { view } = usePermits();
   const isoFlyRef = useRef<((p: Permit) => void) | null>(null);
-  // Iso-specific controls — lifted here so they render in sidebar header slot
-  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoOpen,     setInfoOpen]     = useState(false);
+  const [mobileOpen,   setMobileOpen]   = useState(false);
 
   const handleSidebarSelect = (p: Permit) => {
     if (view === 'iso') isoFlyRef.current?.(p);
@@ -28,7 +28,18 @@ export default function AppShell() {
 
   return (
     <div className="shell">
-      <PermitSidebar onSelectPermit={handleSidebarSelect} headerActions={isoHeaderActions} />
+      <PermitSidebar
+        onSelectPermit={handleSidebarSelect}
+        headerActions={isoHeaderActions}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+      />
+      {/* Mobile backdrop */}
+      {mobileOpen && <div className="shell-mobile-backdrop" onClick={() => setMobileOpen(false)} />}
+      {/* Mobile FAB — hamburger button */}
+      <button className="shell-mobile-fab" onClick={() => setMobileOpen(v => !v)}>
+        {mobileOpen ? '✕' : '☰'}
+      </button>
       <div className="shell-view">
         {view === 'iso'
           ? <IsoView flyRef={isoFlyRef} />
