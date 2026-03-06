@@ -332,7 +332,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${i}`;
       el.addEventListener('mouseenter', (e) => { setTooltip({ permit, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }); });
       el.addEventListener('mouseleave', () => setTooltip(null));
-      el.addEventListener('mousemove',  (e) => setTooltip(t => t ? { ...t, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null));
+      // No mousemove handler — tooltip anchors to enter position, avoids 1000 setState calls during pan
       el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.stopImmediatePropagation(); });
       el.addEventListener('click', (e) => {
         e.stopPropagation();
