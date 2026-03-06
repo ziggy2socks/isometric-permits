@@ -348,19 +348,16 @@ export default function App() {
       viewer.viewport.panTo(new OpenSeadragon.Point(0.3637, 0.3509), true);
       viewer.viewport.zoomTo(window.innerWidth <= 768 ? 10 : 3.5, undefined, true);
     });
-    // Enforce minimum helicopter size — OSD shrinks overlays as you zoom in.
+    // Enforce minimum helicopter size — OSD shrinks overlays proportional to 1/zoom.
     // We counter-scale to maintain a minimum visible pixel size.
-    // OSD scales overlays proportional to 1/zoom, so we multiply by zoom/baseZoom to cancel.
-    const MIN_HELI_PX = 18; // minimum rendered pixel size for the emoji
+    const MIN_HELI_PX = 18;
     viewer.addHandler('zoom', () => {
       const zoom = viewer.viewport.getZoom();
-      // At HELI_BASE_ZOOM the emoji is ~10px (CSS font-size). OSD shrinks it by baseZoom/zoom.
-      // Effective size = 10 * (HELI_BASE_ZOOM / zoom). We want at least MIN_HELI_PX.
       const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
-      const compensate = effectiveSize < MIN_HELI_PX ? MIN_HELI_PX / effectiveSize : 1;
+      const s = effectiveSize < MIN_HELI_PX ? MIN_HELI_PX / effectiveSize : 1;
       heliOverlaysRef.current.forEach(el => {
-        const flip = el.dataset.flip === '1' ? -1 : 1;
-        el.style.transform = `scale(${compensate * flip}, ${compensate})`;
+        // Scale the outer wrapper; inner span handles directional flip independently
+        el.style.transform = `scale(${s})`;
       });
     });
 
@@ -433,12 +430,14 @@ export default function App() {
         positions.set(h.hex, { fromX: curX, fromY: curY, toX, toY, startTime: now, duration: POLL_MS });
         // Update rotation immediately
         const el = existing.get(h.hex)!;
-        el.dataset.flip = (h.track > 90 && h.track < 270) ? '1' : '0';
+        // Flip inner span based on heading: west-ish = face left, east-ish = face right
+        const inner = el.firstElementChild as HTMLElement;
+        if (inner) inner.style.transform = (h.track > 90 && h.track < 270) ? 'scaleX(-1)' : '';
       } else {
         const el = document.createElement('div');
         el.className = 'heli-marker';
-        el.textContent = '🚁';
-        el.dataset.flip = (h.track > 90 && h.track < 270) ? '1' : '0';
+        const facingLeft = h.track > 90 && h.track < 270;
+        el.innerHTML = `<span style="display:inline-block;font-size:14px;${facingLeft ? 'transform:scaleX(-1)' : ''}">🚁</span>`;
         const point = new OpenSeadragon.Point(toX, toY);
         viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
         existing.set(h.hex, el);
@@ -446,13 +445,12 @@ export default function App() {
       }
     });
 
-    // Apply current zoom scale + flip to newly placed/updated helis
+    // Apply current zoom scale to newly placed/updated helis
     const zoom = viewer.viewport.getZoom();
     const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
-    const compensate = effectiveSize < 18 ? 18 / effectiveSize : 1;
+    const s = effectiveSize < MIN_HELI_PX ? MIN_HELI_PX / effectiveSize : 1;
     existing.forEach(el => {
-      const flip = el.dataset.flip === '1' ? -1 : 1;
-      el.style.transform = `scale(${compensate * flip}, ${compensate})`;
+      el.style.transform = `scale(${s})`;
     });
 
     // Start RAF loop if not already running
