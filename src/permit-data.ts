@@ -61,9 +61,6 @@ export async function searchPermits(query: string, limit = 2000): Promise<Permit
   // Try to split "123 WEST 57TH" → house_no=123, street fragment=WEST 57TH
   const addrMatch = q.match(/^(\d+)\s+(.+)$/);
 
-  let workWhere: string;
-  let jobWhere: string;
-
   // Build query using URLSearchParams so encoding is handled correctly by the proxy
   let workWhere: string;
   let jobWhere:  string;
