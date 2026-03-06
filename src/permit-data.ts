@@ -59,49 +59,18 @@ const SOCRATA_PERMITS = 'https://data.cityofnewyork.us/resource/rbx6-tga4.json';
 const SOCRATA_JOBS    = 'https://data.cityofnewyork.us/resource/w9ak-ipjd.json';
 
 export async function searchPermits(query: string, limit = 2000): Promise<Permit[]> {
-  const q = query.trim().toUpperCase();
+  const q = query.trim();
   if (!q) return [];
 
-  // Try to split "123 WEST 57TH" → house_no=123, street fragment=WEST 57TH
-  const addrMatch = q.match(/^(\d+)\s+(.+)$/);
+  // Socrata $q= full-text search — searches all text fields, case-insensitive
+  // $q uses simple encodeURIComponent (no $ signs, no LIKE patterns — no encoding issues)
+  const workUrl = `${SOCRATA_PERMITS}?$q=${encodeURIComponent(q)}&$order=issued_date%20DESC&$limit=${limit}&$where=latitude%20IS%20NOT%20NULL`;
+  const jobUrl  = `${SOCRATA_JOBS}?$q=${encodeURIComponent(q)}&$order=approved_date%20DESC&$limit=200&$where=latitude%20IS%20NOT%20NULL`;
 
-  // Build query strings manually — same pattern as fetchPermits
-  // URLSearchParams encodes $ → %24 which breaks Socrata's $where/$order/$limit params
-  let workWhere: string;
-  let jobWhere:  string;
-
-  // Build queries using URL + URLSearchParams — the browser won't double-encode
-  // because URLSearchParams owns the encoding end-to-end
-  let workWhereSQL: string;
-  let jobWhereSQL:  string;
-
-  if (addrMatch) {
-    const houseNo    = addrMatch[1];
-    const streetWord = addrMatch[2].split(' ')[0];
-    workWhereSQL = `house_no='${houseNo}' AND upper(street_name) LIKE '${streetWord}%' AND latitude IS NOT NULL`;
-    jobWhereSQL  = `house_no='${houseNo}' AND upper(street_name) LIKE '${streetWord}%' AND latitude IS NOT NULL`;
-  } else {
-    const esc = q.replace(/'/g, "''"); // SQL escape only
-    workWhereSQL = `(upper(street_name) LIKE '%${esc}%' OR upper(job_description) LIKE '%${esc}%' OR upper(owner_business_name) LIKE '%${esc}%' OR upper(applicant_business_name) LIKE '%${esc}%') AND latitude IS NOT NULL`;
-    jobWhereSQL  = `(upper(street_name) LIKE '%${esc}%' OR upper(job_description) LIKE '%${esc}%') AND latitude IS NOT NULL`;
-  }
-
-  // URLSearchParams handles all percent-encoding correctly for browser fetch
-  const workParams = new URLSearchParams([
-    ['$order', 'issued_date DESC'],
-    ['$limit', String(limit)],
-    ['$where', workWhereSQL],
-  ]);
-  const jobParams = new URLSearchParams([
-    ['$order', 'approved_date DESC'],
-    ['$limit', '200'],
-    ['$where', `job_type IN('New Building','Full Demolition') AND ${jobWhereSQL}`],
-  ]);
-
-  // Hit Socrata directly — CORS is open (*), no proxy needed
+  // Hit Socrata directly — CORS is open (*)
   const [workRes, jobRes] = await Promise.all([
-    fetch(`${SOCRATA_PERMITS}?${workParams}`, { cache: 'no-store' }),
-    fetch(`${SOCRATA_JOBS}?${jobParams}`,     { cache: 'no-store' }),
+    fetch(workUrl, { cache: 'no-store' }),
+    fetch(jobUrl,  { cache: 'no-store' }),
   ]);
 
   if (!workRes.ok) throw new Error(`Search API ${workRes.status}`);
