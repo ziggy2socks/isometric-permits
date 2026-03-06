@@ -44,8 +44,17 @@ export default function AppShell() {
               <button className="info-close" onClick={() => setInfoOpen(false)}>✕</button>
             </div>
             <div className="info-body">
-              <p>Real-time NYC DOB permit activity — isometric view by <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>.</p>
-              <p>Each dot represents an active permit, color-coded by type. Click any dot or list row for details.</p>
+              <p>NYC DOB permit activity, visualized two ways — an isometric pixel-art view of the city by <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>, and a standard map view. Each dot is a permit, color-coded by type.</p>
+
+              <div className="info-section-label">HOW TO USE</div>
+              <ul className="info-list">
+                <li><strong>ISO / MAP</strong> — switch between isometric and map views. Filters carry over.</li>
+                <li><strong>Date range</strong> — filter by issue date, or use the quick buttons (1d, 7d, 30d, 90d).</li>
+                <li><strong>Search</strong> — searches the full DOB database regardless of date range. Try a street name, address, owner, or contractor.</li>
+                <li><strong>Click a dot or row</strong> — opens permit details including cost, status, owner, and filing number.</li>
+              </ul>
+
+              <div className="info-section-label">PERMIT TYPES</div>
               <div className="info-legend">
                 {['NB','DM','GC','PL','ME','SOL','SHD','SCF'].map(jt => (
                   <div key={jt} className="info-legend-row">
@@ -54,12 +63,17 @@ export default function AppShell() {
                   </div>
                 ))}
               </div>
+
               <div className="info-links">
                 <a href="https://github.com/ziggy2socks/isometric-permits" target="_blank" rel="noopener noreferrer">★ GitHub</a>
                 <a href="https://opendata.cityofnewyork.us" target="_blank" rel="noopener noreferrer">NYC Open Data</a>
                 <a href="https://isometric.nyc" target="_blank" rel="noopener noreferrer">isometric.nyc</a>
               </div>
-              <p className="info-note">Data: NYC Open Data · DOB publishes with a 2–5 day lag</p>
+
+              <p className="info-note">
+                Data sourced from NYC Open Data (DOB NOW: Build). Published with a 2–5 day lag — not for legal or compliance use.
+                No personal data collected or stored.
+              </p>
             </div>
           </div>
         </div>

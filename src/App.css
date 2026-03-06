@@ -917,7 +917,27 @@ html, body, #root {
 .info-note {
   font-size: 10px !important;
   color: rgba(255,255,255,0.3) !important;
+  line-height: 1.5 !important;
+  margin-top: 12px !important;
 }
+
+.info-section-label {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: var(--cyan);
+  margin: 14px 0 6px;
+}
+
+.info-list {
+  margin: 0 0 4px 16px;
+  padding: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+}
+.info-list li { margin-bottom: 4px; }
+.info-list strong { color: rgba(255,255,255,0.9); }
 
 /* ═══════════════════════════════════════
    MOBILE RESPONSIVE (≤768px)
