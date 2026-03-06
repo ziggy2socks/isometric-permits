@@ -433,15 +433,17 @@ export default function App() {
         const el = existing.get(h.hex)!;
         // Flip inner span based on heading: west-ish = face left, east-ish = face right
         const flipSpan = el.querySelector('.heli-flip') as HTMLElement;
-        // 🚁 emoji faces LEFT natively on Apple. Flip when heading right (east).
-        if (flipSpan) flipSpan.style.transform = (h.track > 90 && h.track < 270) ? '' : 'scaleX(-1)';
+        // SVG faces RIGHT by default. Flip when heading left (west: 90 < track < 270).
+        if (flipSpan) flipSpan.style.transform = (h.track > 90 && h.track < 270) ? 'scaleX(-1)' : '';
       } else {
         const el = document.createElement('div');
         el.className = 'heli-marker';
-        // 🚁 emoji faces LEFT natively on Apple. Flip when heading right (east).
-        const facingRight = !(h.track > 90 && h.track < 270);
+        // 🚁 emoji: faces RIGHT on Windows/Android, LEFT on Apple.
+        // We target the majority (Windows/Android) — default facing is RIGHT.
+        // Flip when heading west (90 < track < 270) so the heli faces its direction of travel.
+        const facingLeft = (h.track > 90 && h.track < 270);
         // Structure: .heli-marker > .heli-scale (zoom compensation) > .heli-flip (direction)
-        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingRight ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
+        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingLeft ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
         const point = new OpenSeadragon.Point(toX, toY);
         viewer.addOverlay({ element: el, location: point, placement: OpenSeadragon.Placement.CENTER });
         existing.set(h.hex, el);
