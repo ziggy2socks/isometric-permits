@@ -118,7 +118,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     const q = search.trim();
     if (!q) { setSearchResults([]); setSearching(false); return; }
     setSearching(true);
-    searchDebounce.current = setTimeout(async () => {
+    searchDebounce.current = setTimeout(async () => { // 800ms — wait for typing to pause
       const key = ++searchKey.current;
       try {
         const data = await searchPermits(q, LIST_LIMIT);
@@ -130,7 +130,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
       } finally {
         if (key === searchKey.current) setSearching(false);
       }
-    }, 400);
+    }, 800);
     return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
   }, [search]);
 
