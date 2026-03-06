@@ -27,7 +27,7 @@ export async function fetchPermits(
   const jobQuery = [
     `$order=approved_date+DESC`,
     `$limit=${Math.max(100, Math.round(limit * 0.15))}`,
-    `$where=job_type+IN(%27New+Building%27,%27Full+Demolition%27)+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27`,
+    `$where=job_type+IN(%27New%20Building%27,%27Full%20Demolition%27)+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27`,
   ].join('&');
 
   const [workRes, jobRes] = await Promise.all([
@@ -78,7 +78,7 @@ export async function searchPermits(query: string, limit = 2000): Promise<Permit
   }
 
   const workQuery = `$order=issued_date+DESC&$limit=${limit}&$where=${workWhere}`;
-  const jobQuery  = `$order=approved_date+DESC&$limit=200&$where=job_type+IN(%27New+Building%27,%27Full+Demolition%27)+AND+${jobWhere}`;
+  const jobQuery  = `$order=approved_date+DESC&$limit=200&$where=job_type+IN(%27New%20Building%27,%27Full%20Demolition%27)+AND+${jobWhere}`;
 
   const workUrl = `${PERMITS_BASE}?${workQuery}`;
   const jobUrl  = `${JOBS_BASE}?${jobQuery}`;

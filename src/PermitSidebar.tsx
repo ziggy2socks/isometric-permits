@@ -183,7 +183,7 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
       {/* Results list */}
       <div className="ps-list" ref={listRef}>
         {filtered.slice(0, 500).map((p, i) => {
-          const id = p.job_filing_number ?? p.tracking_number ?? String(i);
+          const id = `${p.job_filing_number ?? p.tracking_number ?? 'p'}-${i}`;
           const color = getJobColor(p.job_type ?? '');
           const isSelected = selected === p ||
             (selected?.job_filing_number && selected.job_filing_number === p.job_filing_number);
