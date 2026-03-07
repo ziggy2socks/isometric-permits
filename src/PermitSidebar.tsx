@@ -2,7 +2,8 @@
  * PermitSidebar — shared filter sidebar for both Iso and Map views.
  * Reads/writes via PermitContext.
  */
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
+import { FixedSizeList as VList } from 'react-window';
 
 /** Uncontrolled text input that commits valid YYYY-MM-DD on blur or Enter */
 function DateInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
@@ -52,7 +53,17 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
   } = usePermits();
   const isLoading = loading || searching;
 
-  const listRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(400);
+
+  // Measure list container height on mount & resize
+  const listContainerRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const measure = () => setListHeight(el.clientHeight || 400);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const handleSelect = (p: Permit) => {
     setSelected(p);
@@ -199,43 +210,46 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
         )}
       </div>
 
-      {/* Results list */}
-      <div className="ps-list" ref={listRef}>
-        {filtered.slice(0, 200).map((p, i) => {
-          const id = `${p.job_filing_number ?? p.tracking_number ?? 'p'}-${i}`;
-          const color = getJobColor(p.job_type ?? '');
-          const isSelected = selected === p ||
-            (selected?.job_filing_number && selected.job_filing_number === p.job_filing_number);
-          return (
-            <div key={id} id={`ps-row-${id}`}
-              className={`ps-row${isSelected ? ' selected' : ''}`}
-              onClick={() => handleSelect(p)}>
-              <div className="ps-row-top">
-                <span className="ps-row-type"
-                  style={{ color, borderColor: color + '88', backgroundColor: color + '18', textShadow: `0 0 6px ${color}` }}>
-                  {p.job_type}
-                </span>
-                <span className="ps-row-date">{formatDate(p.issued_date)}</span>
-              </div>
-              <div className="ps-row-address">{formatAddress(p)}</div>
-              {p.job_description && (
-                <div className="ps-row-desc">
-                  {p.job_description.slice(0, 80)}{p.job_description.length > 80 ? '…' : ''}
-                </div>
-              )}
-              {p.estimated_job_costs && parseFloat(p.estimated_job_costs) > 0 && (
-                <div className="ps-row-cost">${parseInt(p.estimated_job_costs).toLocaleString()}</div>
-              )}
-            </div>
-          );
-        })}
-        {filtered.length > 200 && (
-          <div className="ps-overflow">
-            Showing 200 of {filtered.length.toLocaleString()} — tighten filters
-          </div>
-        )}
+      {/* Results list — virtualized */}
+      <div className="ps-list" ref={listContainerRef}>
         {filtered.length === 0 && !loading && (
           <div className="ps-empty">No permits match filters</div>
+        )}
+        {filtered.length > 0 && (
+          <VList
+            height={listHeight}
+            itemCount={filtered.length}
+            itemSize={72}
+            width="100%"
+            overscanCount={5}
+            style={{ overflowX: 'hidden' }}
+          >
+            {({ index, style }: { index: number; style: React.CSSProperties }) => {
+              const p = filtered[index];
+              const color = getJobColor(p.job_type ?? '');
+              const isSelected = selected === p ||
+                (selected?.job_filing_number && selected.job_filing_number === p.job_filing_number);
+              return (
+                <div style={style}
+                  className={`ps-row${isSelected ? ' selected' : ''}`}
+                  onClick={() => handleSelect(p)}>
+                  <div className="ps-row-top">
+                    <span className="ps-row-type"
+                      style={{ color, borderColor: color + '88', backgroundColor: color + '18', textShadow: `0 0 6px ${color}` }}>
+                      {p.job_type}
+                    </span>
+                    <span className="ps-row-date">{formatDate(p.issued_date)}</span>
+                  </div>
+                  <div className="ps-row-address">{formatAddress(p)}</div>
+                  {p.job_description && (
+                    <div className="ps-row-desc">
+                      {p.job_description.slice(0, 80)}{p.job_description.length > 80 ? '…' : ''}
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          </VList>
         )}
       </div>
       </div> {/* end ps-body */}

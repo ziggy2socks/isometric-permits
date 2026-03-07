@@ -331,18 +331,21 @@
 /* ── Results list ── */
 .ps-list {
   flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  min-height: 0;
 }
-.ps-list::-webkit-scrollbar { width: 4px; }
-.ps-list::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.2); }
-.ps-list::-webkit-scrollbar-thumb:hover { background: rgba(0,200,255,0.4); }
+/* Scrollbar on the virtual list inner container */
+.ps-list > div::-webkit-scrollbar { width: 4px; }
+.ps-list > div::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.2); }
+.ps-list > div::-webkit-scrollbar-thumb:hover { background: rgba(0,200,255,0.4); }
 
 .ps-row {
   padding: 8px 14px;
   border-bottom: 1px solid var(--pp-border-faint);
   cursor: pointer;
   transition: background 0.1s;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .ps-row:hover { background: rgba(0,200,255,0.05); }
 .ps-row.selected {
