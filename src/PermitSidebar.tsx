@@ -2,7 +2,24 @@
  * PermitSidebar — shared filter sidebar for both Iso and Map views.
  * Reads/writes via PermitContext.
  */
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
+
+/** Uncontrolled text input that commits valid YYYY-MM-DD on blur or Enter */
+function DateInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  const [draft, setDraft] = useState(value);
+  const prevValue = useRef(value);
+  // Sync draft when parent value changes (e.g. quick-date button)
+  if (value !== prevValue.current) { prevValue.current = value; if (draft !== value) setDraft(value); }
+  const isValid = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(v).getTime());
+  const commit = () => { if (isValid(draft)) onChange(draft); else setDraft(value); };
+  return (
+    <input type="text" className="ps-date-input" value={draft}
+      placeholder={placeholder} maxLength={10}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => { if (e.key === 'Enter') commit(); }} />
+  );
+}
 import { usePermits } from './PermitContext';
 import {
   ALL_JOB_TYPES, ALL_BOROUGHS,
@@ -45,11 +62,10 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
 
   const todayStr = new Date().toISOString().split('T')[0];
   // DOB NOW data starts mid-2016 — no point allowing earlier dates
-  const minDateStr = '2016-06-01';
   const quickDates = [
-    { label: '1d', days: 1 }, { label: '7d', days: 7 },
+    { label: '7d', days: 7 },
     { label: '30d', days: 30 }, { label: '90d', days: 90 },
-    { label: '1y', days: 365 },
+    { label: '1y', days: 365 }, { label: 'ALL', days: 3650 },
   ];
 
   return (
@@ -106,13 +122,9 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
             }}>↺ 7d</button>
         </div>
         <div className="ps-date-row">
-          <input type="date" className="ps-date-input" value={filters.dateFrom}
-            onChange={e => setDateFrom(e.target.value)}
-            min={minDateStr} max={filters.dateTo || todayStr} />
+          <DateInput value={filters.dateFrom} onChange={setDateFrom} placeholder="YYYY-MM-DD" />
           <span className="ps-date-sep">→</span>
-          <input type="date" className="ps-date-input" value={filters.dateTo}
-            onChange={e => setDateTo(e.target.value)}
-            min={filters.dateFrom || minDateStr} max={todayStr} />
+          <DateInput value={filters.dateTo} onChange={setDateTo} placeholder="YYYY-MM-DD" />
         </div>
         <div className="ps-quick-dates">
           {quickDates.map(({ label, days }) => {

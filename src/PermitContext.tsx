@@ -112,7 +112,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   const loadDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (loadDebounce.current) clearTimeout(loadDebounce.current);
-    loadDebounce.current = setTimeout(load, 400);
+    loadDebounce.current = setTimeout(load, 800); // 800ms — enough time to edit both date fields
     return () => { if (loadDebounce.current) clearTimeout(loadDebounce.current); };
   }, [load]);
 
