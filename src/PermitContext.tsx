@@ -95,7 +95,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchPermits(dateFrom, dateTo, LIST_LIMIT);
+      const data = await fetchPermits(dateFrom, dateTo, LIST_LIMIT, jobTypes, boroughs);
       if (key !== fetchKey.current) return;
       setAllPermits(data);
       setTotalFetched(data.length);
@@ -105,9 +105,16 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     } finally {
       if (key === fetchKey.current) setLoading(false);
     }
-  }, [dateFrom, dateTo]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo, jobTypes, boroughs]);
 
-  useEffect(() => { load(); }, [load]);
+  // Debounce filter changes — 400ms after last filter toggle before fetching
+  const loadDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (loadDebounce.current) clearTimeout(loadDebounce.current);
+    loadDebounce.current = setTimeout(load, 400);
+    return () => { if (loadDebounce.current) clearTimeout(loadDebounce.current); };
+  }, [load]);
 
   // Search — separate API query, no date filter
   const [searchResults, setSearchResults] = useState<Permit[]>([]);

@@ -6,10 +6,34 @@ const JOBS_BASE    = '/api/jobs';
 
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
+// Reverse map: our short code → Socrata work_type strings for $where clause
+const CODE_TO_WORK_TYPE: Record<string, string[]> = {
+  NB:  ['New Building'],
+  DM:  ['Full Demolition'],
+  GC:  ['General Construction'],
+  PL:  ['Plumbing'],
+  ME:  ['Mechanical'],
+  SOL: ['Solar Panel'],
+  SHD: ['Sidewalk Shed'],
+  SCF: ['Scaffold'],
+  FNC: ['Construction Fence'],
+  SG:  ['Sign'],
+  FND: ['Foundation'],
+  STR: ['Structural'],
+  BLR: ['Boiler'],
+  SPR: ['Sprinkler'],
+  EW:  ['Earth Work'],
+  ANT: ['Antenna'],
+  CC:  ['Curb Cut'],
+  STP: ['Standpipe'],
+};
+
 export async function fetchPermits(
   dateFrom: string,
   dateTo: string,
   limit: number = 2000,
+  jobTypeCodes?: Set<string>,
+  boroughNames?: Set<string>,
 ): Promise<Permit[]> {
   // Build Socrata query strings manually — URLSearchParams encodes $ → %24 which breaks API
   const toISO = (s: string) => `${s}T00:00:00.000`;
@@ -18,37 +42,55 @@ export async function fetchPermits(
   const toDate = new Date(dateTo); toDate.setDate(toDate.getDate() + 1);
   const toStr = toDate.toISOString().split('T')[0] + 'T00:00:00.000';
 
-  // Scale limit based on date range — wider ranges need higher limits
-  // to avoid only showing the newest permits.
-  // Socrata max per request is 50,000.
-  const rangeDays = Math.max(1, Math.round(
-    (toDate.getTime() - new Date(dateFrom).getTime()) / (1000 * 60 * 60 * 24)
-  ));
-  const scaledLimit = Math.min(limit, Math.min(50000,
-    rangeDays <= 1 ? 1000 :
-    rangeDays <= 7 ? 3000 :
-    rangeDays <= 30 ? 8000 :
-    rangeDays <= 90 ? 20000 :
-    rangeDays <= 365 ? 40000 :
-    50000
-  ));
+  // Build work_type filter for Socrata $where
+  const allSelected = !jobTypeCodes || jobTypeCodes.size >= ALL_JOB_TYPES.length;
+  let workTypeFilter = '';
+  if (!allSelected) {
+    const workTypes: string[] = [];
+    for (const code of jobTypeCodes) {
+      const types = CODE_TO_WORK_TYPE[code];
+      if (types) workTypes.push(...types);
+      if (code === 'OTH') workTypes.push('Other');
+    }
+    if (workTypes.length > 0) {
+      workTypeFilter = `+AND+work_type+IN(${workTypes.map(t => `%27${encodeURIComponent(t)}%27`).join(',')})`;
+    } else if (!jobTypeCodes.has('NB') && !jobTypeCodes.has('DM')) {
+      workTypeFilter = '__SKIP_WORK__';
+    }
+  }
+
+  // Build borough filter
+  let boroughFilter = '';
+  if (boroughNames && boroughNames.size < ALL_BOROUGHS.length) {
+    const boros = [...boroughNames].map(b => `%27${encodeURIComponent(b)}%27`).join(',');
+    boroughFilter = `+AND+borough+IN(${boros})`;
+  }
+
+  const fetchWork = workTypeFilter !== '__SKIP_WORK__';
+  const fetchJobs = allSelected || (jobTypeCodes?.has('NB') || jobTypeCodes?.has('DM'));
 
   const workQuery = [
     `$order=issued_date+DESC`,
-    `$limit=${scaledLimit}`,
-    `$where=issued_date+>=%27${fromStr}%27+AND+issued_date+<%27${toStr}%27+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL`,
+    `$limit=${limit}`,
+    `$where=issued_date+>=%27${fromStr}%27+AND+issued_date+<%27${toStr}%27+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL${workTypeFilter !== '__SKIP_WORK__' ? workTypeFilter : ''}${boroughFilter}`,
   ].join('&');
 
+  // Jobs endpoint: NB and DM only
+  const jobTypeIn = allSelected ? `%27New%20Building%27,%27Full%20Demolition%27`
+    : [jobTypeCodes?.has('NB') ? `%27New%20Building%27` : '', jobTypeCodes?.has('DM') ? `%27Full%20Demolition%27` : ''].filter(Boolean).join(',');
   const jobQuery = [
     `$order=approved_date+DESC`,
-    `$limit=${Math.max(100, Math.round(scaledLimit * 0.15))}`,
-    `$where=job_type+IN(%27New%20Building%27,%27Full%20Demolition%27)+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27`,
+    `$limit=${Math.max(100, Math.round(limit * 0.3))}`,
+    `$where=job_type+IN(${jobTypeIn})+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27${boroughFilter}`,
   ].join('&');
 
-  const [workRes, jobRes] = await Promise.all([
-    fetch(`${PERMITS_BASE}?${workQuery}`, { cache: 'no-store' }),
-    fetch(`${JOBS_BASE}?${jobQuery}`, { cache: 'no-store' }),
-  ]);
+  const fetches: Promise<Response>[] = [];
+  if (fetchWork) fetches.push(fetch(`${PERMITS_BASE}?${workQuery}`, { cache: 'no-store' }));
+  else fetches.push(Promise.resolve(new Response('[]', { status: 200 })));
+  if (fetchJobs && jobTypeIn) fetches.push(fetch(`${JOBS_BASE}?${jobQuery}`, { cache: 'no-store' }));
+  else fetches.push(Promise.resolve(new Response('[]', { status: 200 })));
+
+  const [workRes, jobRes] = await Promise.all(fetches);
 
   if (!workRes.ok) throw new Error(`Permits API ${workRes.status}`);
   if (!jobRes.ok)  throw new Error(`Jobs API ${jobRes.status}`);
