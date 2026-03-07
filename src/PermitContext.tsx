@@ -53,7 +53,7 @@ export interface PermitContextValue {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const LIST_LIMIT = 10_000;  // max fetched from API
+const LIST_LIMIT = 50_000;  // max fetched from API (Socrata cap)
 const ISO_LIMIT  = 1_000;   // OSD overlays are expensive — keep iso snappy
 const MAP_LIMIT  = 3_000;   // MapLibre GL points are cheap, higher cap fine
 
