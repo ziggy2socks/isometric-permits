@@ -184,7 +184,7 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
 
       {/* Results list */}
       <div className="ps-list" ref={listRef}>
-        {filtered.slice(0, 500).map((p, i) => {
+        {filtered.slice(0, 200).map((p, i) => {
           const id = `${p.job_filing_number ?? p.tracking_number ?? 'p'}-${i}`;
           const color = getJobColor(p.job_type ?? '');
           const isSelected = selected === p ||
@@ -212,9 +212,9 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
             </div>
           );
         })}
-        {filtered.length > 500 && (
+        {filtered.length > 200 && (
           <div className="ps-overflow">
-            Showing 500 of {filtered.length.toLocaleString()} — tighten filters
+            Showing 200 of {filtered.length.toLocaleString()} — tighten filters
           </div>
         )}
         {filtered.length === 0 && !loading && (

@@ -276,9 +276,13 @@ export default function IsoView({ flyRef }: IsoViewProps) {
 
   // Place permit markers — synchronous, no chunking
   // Chunked RAF was causing ghost dots: old chunks kept adding after clear
+  const prevMapPermitsRef = useRef<Permit[]>([]);
   const placeMarkers = useCallback(() => {
     const viewer = osdRef.current;
     if (!viewer) return;
+    // Skip if permits haven't actually changed (reference equality)
+    if (mapPermits === prevMapPermitsRef.current && overlayMarkersRef.current.size > 0) return;
+    prevMapPermitsRef.current = mapPermits;
 
     // Cancel any pending RAF from a previous run
     if (markerRafRef.current !== null) { cancelAnimationFrame(markerRafRef.current); markerRafRef.current = null; }
@@ -318,7 +322,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
       overlayMarkersRef.current.set(key, el);
     }
-  }, [mapPermits, setSelected]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapPermits]); // setSelected accessed via ref, not a direct dependency
 
   // Single debounce ref — any dependency change resets the same timer
   const markerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
