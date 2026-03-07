@@ -81,7 +81,7 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
 
   return (
     <div className={`ps-sidebar${mobileOpen ? ' ps-sidebar--open' : ''}`}>
-      {/* Header — tap to expand/collapse on mobile */}
+      {/* Header */}
       <div className="ps-header">
         <div className="ps-header-row">
           <span className="ps-title">NYC PERMIT PULSE</span>

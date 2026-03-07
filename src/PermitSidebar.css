@@ -398,17 +398,15 @@
     left: 0;
     right: 0;
     width: 100%;
-    height: 20vh;
-    min-height: 120px;
+    height: 72vh;
     border-right: none;
     border-top: 1px solid var(--pp-border);
-    transform: translateY(0); /* always visible */
-    transition: height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 160;
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 160;  /* above neighborhood labels (80) and backdrop (149) */
     box-shadow: 0 -8px 40px rgba(0,200,255,0.08);
   }
-  /* Expanded = full sidebar with filters */
-  .ps-sidebar--open { height: 72vh; }
+  .ps-sidebar--open { transform: translateY(0); }
   .ps-header::before {
     content: '';
     display: block;
@@ -417,18 +415,5 @@
     background: var(--pp-border);
     margin: 0 auto 10px;
     border-radius: 2px;
-    cursor: pointer;
-  }
-  /* Hide filters when collapsed — only show header + list */
-  .ps-sidebar:not(.ps-sidebar--open) .ps-body .ps-section {
-    display: none;
-  }
-  .ps-sidebar:not(.ps-sidebar--open) .ps-body .ps-list {
-    flex: 1;
-  }
-  /* Hide header extras when collapsed — just show title + count */
-  .ps-sidebar:not(.ps-sidebar--open) .ps-view-toggle-row,
-  .ps-sidebar:not(.ps-sidebar--open) .ps-header-actions {
-    display: none;
   }
 }

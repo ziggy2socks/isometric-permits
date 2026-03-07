@@ -65,12 +65,7 @@
 
 @media (max-width: 768px) {
   .shell { flex-direction: column; }
-  .shell-view {
-    flex: 1;
-    /* Leave room for the persistent 20vh bottom feed */
-    height: 80vh;
-    max-height: 80vh;
-  }
+  .shell-view { flex: 1; }
   .iso-controls { top: 8px; right: 8px; }
   .shell-mobile-fab { display: flex; align-items: center; justify-content: center; }
   .shell-mobile-backdrop { display: block; }
