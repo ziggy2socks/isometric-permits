@@ -7,22 +7,23 @@ const JOBS_BASE    = '/api/jobs';
 // ── Fetch ────────────────────────────────────────────────────────────────────
 
 // Reverse map: our short code → Socrata work_type strings for $where clause
+// Reverse map: our code → exact Socrata work_type values (from $select=distinct+work_type)
 const CODE_TO_WORK_TYPE: Record<string, string[]> = {
   NB:  ['New Building'],
   DM:  ['Full Demolition'],
   GC:  ['General Construction'],
   PL:  ['Plumbing'],
-  ME:  ['Mechanical'],
-  SOL: ['Solar Panel'],
+  ME:  ['Mechanical Systems', 'Protection and Mechanical Methods'],
+  SOL: ['Solar'],
   SHD: ['Sidewalk Shed'],
-  SCF: ['Scaffold'],
+  SCF: ['Supported Scaffold', 'Suspended Scaffold'],
   FNC: ['Construction Fence'],
   SG:  ['Sign'],
   FND: ['Foundation'],
   STR: ['Structural'],
-  BLR: ['Boiler'],
-  SPR: ['Sprinkler'],
-  EW:  ['Earth Work'],
+  BLR: ['Boiler Equipment'],
+  SPR: ['Sprinklers'],
+  EW:  ['Earth Work', 'Support of Excavation'],
   ANT: ['Antenna'],
   CC:  ['Curb Cut'],
   STP: ['Standpipe'],
@@ -162,7 +163,7 @@ export function workTypeToCode(workType: string): string {
   if (wt.includes('full demolition'))       return 'DM';
   if (wt.includes('general construction'))  return 'GC';
   if (wt.includes('plumbing'))              return 'PL';
-  if (wt.includes('mechanical'))            return 'ME';
+  if (wt.includes('mechanical') || wt.includes('protection and mechanical')) return 'ME';
   if (wt.includes('solar'))                 return 'SOL';
   if (wt.includes('sidewalk shed'))         return 'SHD';
   if (wt.includes('scaffold'))              return 'SCF';
@@ -172,7 +173,7 @@ export function workTypeToCode(workType: string): string {
   if (wt.includes('structural'))            return 'STR';
   if (wt.includes('boiler'))                return 'BLR';
   if (wt.includes('sprinkler'))             return 'SPR';
-  if (wt.includes('earth work'))            return 'EW';
+  if (wt.includes('earth work') || wt.includes('support of excavation')) return 'EW';
   if (wt.includes('antenna'))               return 'ANT';
   if (wt.includes('curb cut'))              return 'CC';
   if (wt.includes('standpipe'))             return 'STP';
