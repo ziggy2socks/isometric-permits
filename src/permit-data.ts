@@ -21,13 +21,13 @@ export async function fetchPermits(
   const workQuery = [
     `$order=issued_date+DESC`,
     `$limit=${limit}`,
-    `$where=issued_date+>=+'${fromStr}'+AND+issued_date+<+'${toStr}'+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL`,
+    `$where=issued_date+>=%27${fromStr}%27+AND+issued_date+<%27${toStr}%27+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL`,
   ].join('&');
 
   const jobQuery = [
     `$order=approved_date+DESC`,
     `$limit=${Math.max(100, Math.round(limit * 0.15))}`,
-    `$where=job_type+IN('New+Building','Full+Demolition')+AND+latitude+IS+NOT+NULL+AND+approved_date+>=+'${fromStr}'+AND+approved_date+<+'${toStr}'`,
+    `$where=job_type+IN(%27New%20Building%27,%27Full%20Demolition%27)+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27`,
   ].join('&');
 
   const [workRes, jobRes] = await Promise.all([
@@ -50,6 +50,51 @@ export async function fetchPermits(
   }));
 
   return [...workPermits, ...jobPermits];
+}
+
+// ── Address / keyword search (full DB, no date filter) ───────────────────────
+// Hits Socrata directly — CORS is open (*), bypasses Vite proxy encoding issues
+
+const SOCRATA_PERMITS = 'https://data.cityofnewyork.us/resource/rbx6-tga4.json';
+const SOCRATA_JOBS    = 'https://data.cityofnewyork.us/resource/w9ak-ipjd.json';
+
+export async function searchPermits(query: string, limit = 2000): Promise<Permit[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  // Socrata $q= full-text search — searches all text fields, case-insensitive
+  // $q uses simple encodeURIComponent (no $ signs, no LIKE patterns — no encoding issues)
+  const workUrl = `${SOCRATA_PERMITS}?$q=${encodeURIComponent(q)}&$order=issued_date%20DESC&$limit=${limit}&$where=latitude%20IS%20NOT%20NULL`;
+  const jobUrl  = `${SOCRATA_JOBS}?$q=${encodeURIComponent(q)}&$order=approved_date%20DESC&$limit=200&$where=latitude%20IS%20NOT%20NULL`;
+
+  // Hit Socrata directly — CORS is open (*)
+  const [workRes, jobRes] = await Promise.all([
+    fetch(workUrl, { cache: 'no-store' }),
+    fetch(jobUrl,  { cache: 'no-store' }),
+  ]);
+
+  if (!workRes.ok) throw new Error(`Search API ${workRes.status}`);
+  if (!jobRes.ok)  throw new Error(`Search API ${jobRes.status}`);
+
+  const workRaw: Permit[] = await workRes.json();
+  const jobRaw:  Permit[] = await jobRes.json();
+
+  const workPermits = workRaw.map(p => ({ ...p, job_type: workTypeToCode(p.work_type ?? '') }));
+  const jobPermits: Permit[] = jobRaw.map(p => ({
+    ...p,
+    work_type: p.job_type,
+    job_type: p.job_type === 'New Building' ? 'NB' : 'DM',
+    issued_date: p.approved_date,
+  }));
+
+  // Dedupe by job_filing_number
+  const seen = new Set<string>();
+  return [...workPermits, ...jobPermits].filter(p => {
+    const key = p.job_filing_number ?? `${p.house_no}-${p.street_name}-${p.issued_date}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // ── Work type normalization ───────────────────────────────────────────────────
@@ -139,3 +184,11 @@ export function formatDate(dateStr?: string): string {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   } catch { return dateStr; }
 }
+
+export const WORK_TYPE_EMOJIS: Record<string, string> = {
+  NB:'🏗', DM:'💥', GC:'🔨', PL:'🔵', ME:'⚙️', SOL:'☀️',
+  SHD:'🏚', SCF:'🪜', FNC:'🚧', SG:'📋', FND:'🪨', STR:'🔩',
+  BLR:'🔥', SPR:'💧', EW:'🌍', ANT:'📡', CC:'🛤', STP:'🚿', OTH:'📌',
+};
+
+export function getJobEmoji(jobType: string): string { return WORK_TYPE_EMOJIS[jobType] ?? '📌'; }

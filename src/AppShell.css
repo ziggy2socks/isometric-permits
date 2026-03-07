@@ -1,0 +1,72 @@
+/* ── AppShell — top-level layout ─────────────────────────────────────────── */
+.shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  background: #0a0c14;
+  overflow: hidden;
+}
+
+.shell-view {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+
+/* IsoView fills its container */
+.iso-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.iso-view .viewer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Iso-specific controls — floated top-right of the iso view */
+.iso-controls {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 6px;
+  z-index: 50;
+}
+
+/* Mobile FAB — opens sidebar */
+.shell-mobile-fab {
+  display: none;
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: rgba(8,10,20,0.92);
+  border: 1px solid rgba(0,200,255,0.35);
+  color: #00ccff;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 200;
+  box-shadow: 0 0 12px rgba(0,200,255,0.15);
+}
+
+.shell-mobile-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 149;
+}
+
+@media (max-width: 768px) {
+  .shell { flex-direction: column; }
+  .shell-view { flex: 1; }
+  .iso-controls { top: 8px; right: 8px; }
+  .shell-mobile-fab { display: flex; align-items: center; justify-content: center; }
+  .shell-mobile-backdrop { display: block; }
+}

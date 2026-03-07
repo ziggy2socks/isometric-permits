@@ -24,8 +24,10 @@ export interface HelicopterState {
   lat: number;
   lon: number;
   alt: number;       // feet
+  alt_baro?: number; // feet (barometric)
   track: number;     // degrees (0=N, 90=E, 180=S, 270=W)
   gs: number;        // knots ground speed
+  flight?: string;   // callsign
 }
 
 export async function fetchHelicopters(): Promise<HelicopterState[]> {
@@ -53,8 +55,10 @@ export async function fetchHelicopters(): Promise<HelicopterState[]> {
       lat: a.lat,
       lon: a.lon,
       alt: typeof a.alt_baro === 'number' ? a.alt_baro : 0,
+      alt_baro: typeof a.alt_baro === 'number' ? a.alt_baro : undefined,
       track: typeof a.track === 'number' ? a.track : 0,
       gs: typeof a.gs === 'number' ? a.gs : 0,
+      flight: typeof a.flight === 'string' ? a.flight.trim() : undefined,
     }));
   } catch {
     return [];

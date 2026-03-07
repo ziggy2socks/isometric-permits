@@ -442,20 +442,10 @@ html, body, #root {
 }
 
 .permit-marker--selected {
-  transform: scale(2);
+  transform: scale(2.2);
   z-index: 998;
-  animation: marker-selected-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes marker-selected-pulse {
-  0%, 100% {
-    transform: scale(2);
-    box-shadow: 0 0 6px 2px var(--color, #00ccff), 0 0 14px 4px var(--color, #00ccff);
-  }
-  50% {
-    transform: scale(2.4);
-    box-shadow: 0 0 12px 4px var(--color, #00ccff), 0 0 28px 8px var(--color, #00ccff);
-  }
+  box-shadow: 0 0 8px 3px var(--color, #00ccff), 0 0 18px 6px var(--color, #00ccff);
+  /* No animation — infinite loops on OSD overlays drag the compositor */
 }
 
 /* ── Tooltip ── */
@@ -552,7 +542,7 @@ html, body, #root {
 .drawer {
   position: absolute;
   top: 0;
-  left: 260px; /* sidebar width */
+  left: 0; /* sidebar is now outside .iso-view — drawer starts at view edge */
   width: 280px;
   height: 100%;
   background: rgba(6, 8, 18, 0.97);
@@ -917,7 +907,27 @@ html, body, #root {
 .info-note {
   font-size: 10px !important;
   color: rgba(255,255,255,0.3) !important;
+  line-height: 1.5 !important;
+  margin-top: 12px !important;
 }
+
+.info-section-label {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: var(--cyan);
+  margin: 14px 0 6px;
+}
+
+.info-list {
+  margin: 0 0 4px 16px;
+  padding: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+}
+.info-list li { margin-bottom: 4px; }
+.info-list strong { color: rgba(255,255,255,0.9); }
 
 /* ═══════════════════════════════════════
    MOBILE RESPONSIVE (≤768px)
