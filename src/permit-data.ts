@@ -18,15 +18,30 @@ export async function fetchPermits(
   const toDate = new Date(dateTo); toDate.setDate(toDate.getDate() + 1);
   const toStr = toDate.toISOString().split('T')[0] + 'T00:00:00.000';
 
+  // Scale limit based on date range — wider ranges need higher limits
+  // to avoid only showing the newest permits.
+  // Socrata max per request is 50,000.
+  const rangeDays = Math.max(1, Math.round(
+    (toDate.getTime() - new Date(dateFrom).getTime()) / (1000 * 60 * 60 * 24)
+  ));
+  const scaledLimit = Math.min(limit, Math.min(50000,
+    rangeDays <= 1 ? 1000 :
+    rangeDays <= 7 ? 3000 :
+    rangeDays <= 30 ? 8000 :
+    rangeDays <= 90 ? 20000 :
+    rangeDays <= 365 ? 40000 :
+    50000
+  ));
+
   const workQuery = [
     `$order=issued_date+DESC`,
-    `$limit=${limit}`,
+    `$limit=${scaledLimit}`,
     `$where=issued_date+>=%27${fromStr}%27+AND+issued_date+<%27${toStr}%27+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL`,
   ].join('&');
 
   const jobQuery = [
     `$order=approved_date+DESC`,
-    `$limit=${Math.max(100, Math.round(limit * 0.15))}`,
+    `$limit=${Math.max(100, Math.round(scaledLimit * 0.15))}`,
     `$where=job_type+IN(%27New%20Building%27,%27Full%20Demolition%27)+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27`,
   ].join('&');
 

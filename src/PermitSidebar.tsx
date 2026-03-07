@@ -44,9 +44,12 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
   };
 
   const todayStr = new Date().toISOString().split('T')[0];
+  // DOB NOW data starts mid-2016 — no point allowing earlier dates
+  const minDateStr = '2016-06-01';
   const quickDates = [
     { label: '1d', days: 1 }, { label: '7d', days: 7 },
     { label: '30d', days: 30 }, { label: '90d', days: 90 },
+    { label: '1y', days: 365 },
   ];
 
   return (
@@ -104,10 +107,12 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
         </div>
         <div className="ps-date-row">
           <input type="date" className="ps-date-input" value={filters.dateFrom}
-            onChange={e => setDateFrom(e.target.value)} />
+            onChange={e => setDateFrom(e.target.value)}
+            min={minDateStr} max={filters.dateTo || todayStr} />
           <span className="ps-date-sep">→</span>
           <input type="date" className="ps-date-input" value={filters.dateTo}
-            onChange={e => setDateTo(e.target.value)} max={todayStr} />
+            onChange={e => setDateTo(e.target.value)}
+            min={filters.dateFrom || minDateStr} max={todayStr} />
         </div>
         <div className="ps-quick-dates">
           {quickDates.map(({ label, days }) => {
