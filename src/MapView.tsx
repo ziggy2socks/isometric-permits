@@ -8,7 +8,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { usePermits } from './PermitContext';
 import {
-  WORK_TYPE_COLORS, WORK_TYPE_LABELS,
+
   getJobColor, getJobLabel, formatAddress, formatDate,
 } from './permit-data';
 import type { Permit } from './types';
@@ -36,10 +36,10 @@ const MAP_STYLE = {
   ],
 };
 
-const LEGEND_TYPES = ['NB', 'DM', 'GC', 'PL', 'ME'];
+// const LEGEND_TYPES = ['NB', 'DM', 'GC', 'PL', 'ME'];
 
 export default function MapView() {
-  const { filtered, mapPermits, selected, setSelected } = usePermits();
+  const { mapPermits, selected, setSelected } = usePermits();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef          = useRef<maplibregl.Map | null>(null);
   const popupRef        = useRef<maplibregl.Popup | null>(null);

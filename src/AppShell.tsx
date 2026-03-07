@@ -2,7 +2,7 @@
  * AppShell — top-level shell that renders the shared sidebar
  * alongside whichever view is active (iso or map).
  */
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { usePermits } from './PermitContext';
 import PermitSidebar from './PermitSidebar';
 import IsoView from './IsoView';

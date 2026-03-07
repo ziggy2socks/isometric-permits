@@ -6,8 +6,8 @@ import React, { useRef } from 'react';
 import { usePermits } from './PermitContext';
 import {
   ALL_JOB_TYPES, ALL_BOROUGHS,
-  WORK_TYPE_COLORS, WORK_TYPE_LABELS,
-  getJobColor, getJobLabel, formatAddress, formatDate,
+  WORK_TYPE_COLORS,
+  getJobColor, formatAddress, formatDate,
 } from './permit-data';
 import type { Permit } from './types';
 
@@ -27,7 +27,7 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
   const {
     view, setView,
     filters, loading, searching, error, searchMode,
-    filtered, mapPermits, dotLimit,
+    filtered, dotLimit,
     setDateFrom, setDateTo,
     toggleJobType, setAllJobTypes, setNoJobTypes,
     toggleBorough, setSearch,

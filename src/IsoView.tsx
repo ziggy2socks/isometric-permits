@@ -4,7 +4,7 @@
  * Sidebar is rendered by AppShell via PermitSidebar.
  */
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
+import { FixedSizeList as List } from 'react-window';
 import OpenSeadragon from 'openseadragon';
 import type { Permit } from './types';
 import { latlngToImagePx, IMAGE_DIMS } from './coordinates';
@@ -16,6 +16,9 @@ import { NeighborhoodLabels } from './NeighborhoodLabels';
 import { fetchHelicopters, type HelicopterState } from './helicopters';
 import { usePermits } from './PermitContext';
 import './App.css';
+
+const HELI_BASE_ZOOM = 3.5;
+const MIN_HELI_PX = 6;
 
 // ── Tile setup ────────────────────────────────────────────────────────────────
 const TILE_BASE    = '/dzi/tiles_files';
@@ -48,32 +51,6 @@ function computeOpacities(permits: Permit[]): Map<Permit, number> {
     map.set(p, isNaN(t) || max === min ? 1 : 0.5 + 0.5 * ((t - min) / (max - min)));
   });
   return map;
-}
-
-// ── Permit breakdown chart ────────────────────────────────────────────────────
-function PermitChart({ permits }: { permits: Permit[] }) {
-  const counts = new Map<string, number>();
-  for (const p of permits) counts.set(p.job_type ?? 'OTH', (counts.get(p.job_type ?? 'OTH') ?? 0) + 1);
-  const bars = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-  if (bars.length === 0) return null;
-  const max = bars[0][1];
-  return (
-    <div className="chart">
-      <div className="chart-title">BREAKDOWN</div>
-      <div className="chart-bars">
-        {bars.map(([jt, count]) => (
-          <div key={jt} className="chart-row" title={`${getJobLabel(jt)}: ${count}`}>
-            <span className="chart-label">{jt}</span>
-            <div className="chart-track">
-              <div className="chart-bar" style={{ width: `${(count / max) * 100}%`, background: getJobColor(jt), boxShadow: `0 0 6px ${getJobColor(jt)}` }} />
-            </div>
-            <span className="chart-count">{count}</span>
-          </div>
-        ))}
-      </div>
-      <div className="chart-total">{permits.length.toLocaleString()} total</div>
-    </div>
-  );
 }
 
 // ── Permit detail drawer ──────────────────────────────────────────────────────
@@ -136,35 +113,6 @@ function DrawerField({ label, value, mono }: { label: string; value: string; mon
   );
 }
 
-// ── Permit row (virtualized list) ─────────────────────────────────────────────
-function PermitRow({ index, style, data }: ListChildComponentProps) {
-  const { sortedPermits, selectedPermit, setDrawerPermit, setSelected, flyToPermit } = data as {
-    sortedPermits: Permit[];
-    selectedPermit: Permit | null;
-    setDrawerPermit: (p: Permit) => void;
-    setSelected: (p: Permit) => void;
-    flyToPermit: (p: Permit) => void;
-  };
-  const p    = sortedPermits[index];
-  const color = getJobColor(p.job_type ?? '');
-  const isSelected = selectedPermit === p ||
-    (selectedPermit?.job_filing_number && selectedPermit.job_filing_number === p.job_filing_number);
-  return (
-    <div style={style}
-      className={`permit-row${isSelected ? ' permit-row--selected' : ''}`}
-      onClick={() => { setSelected(p); setDrawerPermit(p); flyToPermit(p); }}>
-      <span className="permit-row-dot" style={{ background: color, color, boxShadow: `0 0 4px 1px ${color}` }} />
-      <div className="permit-row-content">
-        <div className="permit-row-top">
-          <span className="permit-row-type" style={{ color }}>{p.job_type}</span>
-          <span className="permit-row-date">{formatDate(p.issued_date ?? p.approved_date)?.split(',')[0]}</span>
-        </div>
-        <div className="permit-row-address">{formatAddress(p)}</div>
-      </div>
-    </div>
-  );
-}
-
 // ── IsoView ───────────────────────────────────────────────────────────────────
 interface IsoViewProps {
   flyRef?: React.MutableRefObject<((p: Permit) => void) | null>;
@@ -186,6 +134,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const heliActiveRef      = useRef(false);
   const listRef            = useRef<List>(null);
   const permitListWrapRef  = useRef<HTMLDivElement>(null);
+  const [, setPermitListHeight] = useState(0);
 
   const [dziLoaded,        setDziLoaded]      = useState(false);
   const [drawerPermit,     setDrawerPermit]   = useState<Permit | null>(null);
@@ -221,21 +170,17 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       viewer.viewport.panTo(new OpenSeadragon.Point(0.3637, 0.3509), true);
       viewer.viewport.zoomTo(window.innerWidth <= 768 ? 10 : 3.5, undefined, true);
     });
-    // Enforce minimum helicopter size — let OSD scale them naturally, but counter-scale
-    // when zoom exceeds a threshold so they don't shrink to invisible
-    const BASE_ZOOM = 3.5; // zoom level where heli size looks good
+    // Enforce minimum helicopter size — OSD shrinks overlays proportional to 1/zoom.
+    // Scale applied to inner .heli-scale div (OSD overwrites element.style.transform directly).
+    // HELI_BASE_ZOOM and MIN_HELI_PX are module-level constants
     viewer.addHandler('zoom', () => {
       const zoom = viewer.viewport.getZoom();
-      if (zoom > BASE_ZOOM) {
-        const scale = Math.max(1, zoom / BASE_ZOOM * 0.6); // counter-scale, floor at 1x
-        heliOverlaysRef.current.forEach(el => {
-          el.style.transform = `scale(${scale})`;
-        });
-      } else {
-        heliOverlaysRef.current.forEach(el => {
-          el.style.transform = '';
-        });
-      }
+      const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
+      const s = effectiveSize < MIN_HELI_PX ? MIN_HELI_PX / effectiveSize : 1;
+      heliOverlaysRef.current.forEach(el => {
+        const scaleDiv = el.querySelector('.heli-scale') as HTMLElement;
+        if (scaleDiv) scaleDiv.style.transform = `scale(${s})`;
+      });
     });
 
     osdRef.current = viewer;
@@ -258,19 +203,22 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     const now       = performance.now();
     const seen      = new Set<string>();
     for (const heli of helis) {
-      const { hex, lat, lng, track } = heli;
-      if (isNaN(lat) || isNaN(lng)) continue;
+      const { hex, lat, lon, track } = heli;
+      if (isNaN(lat) || isNaN(lon)) continue;
       seen.add(hex);
-      const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
+      const { x: imgX, y: imgY } = latlngToImagePx(lat, lon);
       const vpX = imgX / IMAGE_DIMS.width;
       const vpY = imgY / IMAGE_DIMS.width;
-      const oldTrack = tracks.get(hex) ?? track;
+      // tracks.get(hex) available for future smooth rotation
       tracks.set(hex, track);
       let el = existing.get(hex);
       if (!el) {
         el = document.createElement('div');
         el.className = 'heli-marker';
         el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
+        // 🚁 emoji faces LEFT natively on Apple. Flip when heading right (east).
+        const facingRight = !(track > 90 && track < 270);
+        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingRight ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
         viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
         existing.set(hex, el);
         positions.set(hex, { fromX: vpX, fromY: vpY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
@@ -281,13 +229,23 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         const curX = cur.fromX + (cur.toX - cur.fromX) * t;
         const curY = cur.fromY + (cur.toY - cur.fromY) * t;
         positions.set(hex, { fromX: curX, fromY: curY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
+        // Update flip direction
+        const flipSpan = el.querySelector('.heli-flip') as HTMLElement;
+        if (flipSpan) flipSpan.style.transform = (track > 90 && track < 270) ? '' : 'scaleX(-1)';
       }
-      el.innerHTML = `<span style="display:inline-block;transform:rotate(${track}deg);font-size:14px">🚁</span>`;
       el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
     }
     for (const [hex, el] of existing) {
       if (!seen.has(hex)) { viewer.removeOverlay(el); existing.delete(hex); positions.delete(hex); tracks.delete(hex); }
     }
+    // Apply current zoom scale to helis
+    const zoom = viewer.viewport.getZoom();
+    const effectiveSize = 10 * (HELI_BASE_ZOOM / zoom);
+    const s = effectiveSize < MIN_HELI_PX ? MIN_HELI_PX / effectiveSize : 1;
+    existing.forEach(el => {
+      const scaleDiv = el.querySelector('.heli-scale') as HTMLElement;
+      if (scaleDiv) scaleDiv.style.transform = `scale(${s})`;
+    });
     const animate = (ts: number) => {
       if (!heliActiveRef.current) return;
       for (const [hex, pos] of positions) {
