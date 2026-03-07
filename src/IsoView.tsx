@@ -126,7 +126,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const overlayMarkersRef  = useRef<Map<string, HTMLElement>>(new Map());
 
   const labelsRef          = useRef<NeighborhoodLabels | null>(null);
-  const markerRafRef       = useRef<number | null>(null);
+
   const heliOverlaysRef    = useRef<Map<string, HTMLElement>>(new Map());
   const heliTrackRef       = useRef<Map<string, number>>(new Map());
   const heliPositionsRef   = useRef<Map<string, { fromX: number; fromY: number; toX: number; toY: number; startTime: number; duration: number }>>(new Map());
@@ -276,65 +276,105 @@ export default function IsoView({ flyRef }: IsoViewProps) {
 
   // Place permit markers — synchronous, no chunking
   // Chunked RAF was causing ghost dots: old chunks kept adding after clear
-  const prevMapPermitsRef = useRef<Permit[]>([]);
-  const placeMarkers = useCallback(() => {
-    const viewer = osdRef.current;
-    if (!viewer) return;
-    // Skip if permits haven't actually changed (reference equality)
-    if (mapPermits === prevMapPermitsRef.current && overlayMarkersRef.current.size > 0) return;
-    prevMapPermitsRef.current = mapPermits;
-
-    // Cancel any pending RAF from a previous run
-    if (markerRafRef.current !== null) { cancelAnimationFrame(markerRafRef.current); markerRafRef.current = null; }
-
-    // Nuclear clear — remove ALL overlays with class permit-marker from OSD directly
-    // This catches any elements that slipped past overlayMarkersRef tracking
-    const allMarkerEls = viewer.element.querySelectorAll('.permit-marker');
-    allMarkerEls.forEach(el => viewer.removeOverlay(el as HTMLElement));
-    overlayMarkersRef.current.clear();
-
-    if (mapPermits.length === 0) return;
-
+  // Pre-compute viewport coordinates for all permits (only recalc when mapPermits changes)
+  const permitVpCoords = useMemo(() => {
     const opacities = computeOpacities(mapPermits);
-    for (let i = 0; i < mapPermits.length; i++) {
-      const permit = mapPermits[i];
+    return mapPermits.map((permit, i) => {
       const lat = parseFloat(permit.latitude ?? '');
       const lng = parseFloat(permit.longitude ?? '');
-      if (isNaN(lat) || isNaN(lng)) continue;
+      if (isNaN(lat) || isNaN(lng)) return null;
       const { x: imgX, y: imgY } = latlngToImagePx(lat, lng);
       const vpX = imgX / IMAGE_DIMS.width;
       const vpY = imgY / IMAGE_DIMS.width;
+      const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${i}`;
+      return { permit, vpX, vpY, key, opacity: opacities.get(permit) ?? 1 };
+    }).filter(Boolean) as { permit: Permit; vpX: number; vpY: number; key: string; opacity: number }[];
+  }, [mapPermits]);
+
+  // Viewport-culled marker placement — only add overlays for permits visible in viewport
+  const syncMarkers = useCallback(() => {
+    const viewer = osdRef.current;
+    if (!viewer) return;
+
+    const bounds = viewer.viewport.getBounds(true);
+    // Buffer: expand bounds by 20% to pre-render dots just outside the viewport
+    const bw = bounds.width * 0.2, bh = bounds.height * 0.2;
+    const left = bounds.x - bw, right = bounds.x + bounds.width + bw;
+    const top = bounds.y - bh, bottom = bounds.y + bounds.height + bh;
+
+    // Determine which permits are in the viewport
+    const visibleKeys = new Set<string>();
+    const toAdd: typeof permitVpCoords = [];
+    for (const item of permitVpCoords) {
+      if (item.vpX >= left && item.vpX <= right && item.vpY >= top && item.vpY <= bottom) {
+        visibleKeys.add(item.key);
+        if (!overlayMarkersRef.current.has(item.key)) {
+          toAdd.push(item);
+        }
+      }
+    }
+
+    // Remove overlays no longer in viewport
+    for (const [key, el] of overlayMarkersRef.current) {
+      if (!visibleKeys.has(key)) {
+        try { viewer.removeOverlay(el); } catch {}
+        overlayMarkersRef.current.delete(key);
+      }
+    }
+
+    // Add new visible overlays
+    for (const item of toAdd) {
       const el = document.createElement('div');
       el.className = 'permit-marker';
-      const color = getJobColor(permit.job_type ?? '');
-      el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};--color:${color};opacity:${opacities.get(permit) ?? 1};cursor:pointer;pointer-events:auto;`;
-      const key = permit.job_filing_number ? `job-${permit.job_filing_number}` : `idx-${i}`;
-      el.addEventListener('mouseenter', (e) => { setTooltip({ permit, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }); });
+      const color = getJobColor(item.permit.job_type ?? '');
+      el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};--color:${color};opacity:${item.opacity};cursor:pointer;pointer-events:auto;`;
+      el.addEventListener('mouseenter', (e) => { setTooltip({ permit: item.permit, x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY }); });
       el.addEventListener('mouseleave', () => setTooltip(null));
-      // No mousemove handler — tooltip anchors to enter position, avoids 1000 setState calls during pan
       el.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.stopImmediatePropagation(); });
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         e.stopImmediatePropagation();
-        setDrawerRef.current(permit);
-        setSelectedRef.current(permit);
+        setDrawerRef.current(item.permit);
+        setSelectedRef.current(item.permit);
       });
-      viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
-      overlayMarkersRef.current.set(key, el);
+      viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(item.vpX, item.vpY), placement: OpenSeadragon.Placement.CENTER });
+      overlayMarkersRef.current.set(item.key, el);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapPermits]); // setSelected accessed via ref, not a direct dependency
+  }, [permitVpCoords]);
 
-  // Single debounce ref — any dependency change resets the same timer
-  const markerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Full clear + re-sync when permits data changes
+  const prevPermitsRef = useRef<typeof permitVpCoords>([]);
   useEffect(() => {
     if (!dziLoaded) return;
-    // Always cancel the pending timer — only one placeMarkers call wins
-    if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current);
-    markerDebounceRef.current = setTimeout(placeMarkers, 300);
-    return () => { if (markerDebounceRef.current) clearTimeout(markerDebounceRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dziLoaded, mapPermits]); // placeMarkers is stable via useCallback
+    if (permitVpCoords === prevPermitsRef.current) return;
+    prevPermitsRef.current = permitVpCoords;
+    // Nuclear clear on data change
+    const viewer = osdRef.current;
+    if (viewer) {
+      viewer.element.querySelectorAll('.permit-marker').forEach(el => viewer.removeOverlay(el as HTMLElement));
+      overlayMarkersRef.current.clear();
+    }
+    syncMarkers();
+  }, [dziLoaded, permitVpCoords, syncMarkers]);
+
+  // Re-sync on viewport changes (pan/zoom) — debounced
+  useEffect(() => {
+    const viewer = osdRef.current;
+    if (!viewer || !dziLoaded) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onViewportChange = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(syncMarkers, 150);
+    };
+    viewer.addHandler('animation-finish', onViewportChange);
+    viewer.addHandler('zoom', onViewportChange);
+    return () => {
+      if (timer) clearTimeout(timer);
+      viewer.removeHandler('animation-finish', onViewportChange);
+      viewer.removeHandler('zoom', onViewportChange);
+    };
+  }, [dziLoaded, syncMarkers]);
 
   const flyToPermit = useCallback((permit: Permit) => {
     const viewer = osdRef.current;
