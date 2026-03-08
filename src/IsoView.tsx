@@ -445,7 +445,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
 
   return (
     <div className="iso-view">
-      <div ref={viewerRef} className="viewer" />
+      <div ref={viewerRef} className="viewer" onClick={() => setHeliTooltip(null)} />
 
       {!dziLoaded && (
         <div className="loading-overlay">
