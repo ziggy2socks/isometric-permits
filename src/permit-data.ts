@@ -54,7 +54,7 @@ export async function fetchPermits(
       if (code === 'OTH') workTypes.push('Other');
     }
     if (workTypes.length > 0) {
-      workTypeFilter = `+AND+work_type+IN(${workTypes.map(t => `%27${encodeURIComponent(t)}%27`).join(',')})`;
+      workTypeFilter = `%20AND%20work_type%20IN(${workTypes.map(t => `%27${encodeURIComponent(t)}%27`).join(',')})`;
     } else if (!jobTypeCodes.has('NB') && !jobTypeCodes.has('DM')) {
       workTypeFilter = '__SKIP_WORK__';
     }
@@ -64,25 +64,25 @@ export async function fetchPermits(
   let boroughFilter = '';
   if (boroughNames && boroughNames.size < ALL_BOROUGHS.length) {
     const boros = [...boroughNames].map(b => `%27${encodeURIComponent(b)}%27`).join(',');
-    boroughFilter = `+AND+borough+IN(${boros})`;
+    boroughFilter = `%20AND%20borough%20IN(${boros})`;
   }
 
   const fetchWork = workTypeFilter !== '__SKIP_WORK__';
   const fetchJobs = allSelected || (jobTypeCodes?.has('NB') || jobTypeCodes?.has('DM'));
 
   const workQuery = [
-    `$order=issued_date+DESC`,
+    `$order=issued_date%20DESC`,
     `$limit=${limit}`,
-    `$where=issued_date+>=%27${fromStr}%27+AND+issued_date+<%27${toStr}%27+AND+latitude+IS+NOT+NULL+AND+longitude+IS+NOT+NULL${workTypeFilter !== '__SKIP_WORK__' ? workTypeFilter : ''}${boroughFilter}`,
+    `$where=issued_date%20>=%27${fromStr}%27%20AND%20issued_date%20<%27${toStr}%27%20AND%20latitude%20IS%20NOT%20NULL%20AND%20longitude%20IS%20NOT%20NULL${workTypeFilter !== '__SKIP_WORK__' ? workTypeFilter : ''}${boroughFilter}`,
   ].join('&');
 
   // Jobs endpoint: NB and DM only
   const jobTypeIn = allSelected ? `%27New%20Building%27,%27Full%20Demolition%27`
     : [jobTypeCodes?.has('NB') ? `%27New%20Building%27` : '', jobTypeCodes?.has('DM') ? `%27Full%20Demolition%27` : ''].filter(Boolean).join(',');
   const jobQuery = [
-    `$order=approved_date+DESC`,
+    `$order=approved_date%20DESC`,
     `$limit=${Math.max(100, Math.round(limit * 0.3))}`,
-    `$where=job_type+IN(${jobTypeIn})+AND+latitude+IS+NOT+NULL+AND+approved_date+>=%27${fromStr}%27+AND+approved_date+<%27${toStr}%27${boroughFilter}`,
+    `$where=job_type%20IN(${jobTypeIn})%20AND%20latitude%20IS%20NOT%20NULL%20AND%20approved_date%20>=%27${fromStr}%27%20AND%20approved_date%20<%27${toStr}%27${boroughFilter}`,
   ].join('&');
 
   const fetches: Promise<Response>[] = [];
