@@ -135,10 +135,13 @@ export async function searchPermits(query: string, limit = 2000, dateFrom?: stri
   let jobUrl: string;
 
   if (quotedMatch) {
-    // Exact phrase — search street_name + owner fields with LIKE
+    // Exact phrase — LIKE across all relevant text fields
     const phrase = quotedMatch[1].toUpperCase().replace(/'/g, "''");
-    const whereClause = `(upper(street_name) LIKE '%${phrase}%' OR upper(owner_business_name) LIKE '%${phrase}%' OR upper(owner_last_name) LIKE '%${phrase}%') AND latitude IS NOT NULL${dateClause}`;
-    const jobWhereClause = `(upper(street_name) LIKE '%${phrase}%') AND latitude IS NOT NULL${jobDateClause}`;
+    const fields = ['street_name', 'owner_business_name', 'owner_last_name', 'owner_first_name', 'work_type', 'filing_status'];
+    const jobFields = ['street_name', 'owner_business_name', 'owner_last_name'];
+    const likeOr = (flds: string[]) => flds.map(f => `upper(${f}) LIKE '%${phrase}%'`).join(' OR ');
+    const whereClause    = `(${likeOr(fields)}) AND latitude IS NOT NULL${dateClause}`;
+    const jobWhereClause = `(${likeOr(jobFields)}) AND latitude IS NOT NULL${jobDateClause}`;
     workUrl = `${SOCRATA_PERMITS}?$order=issued_date DESC&$limit=${limit}&$where=${encodeURIComponent(whereClause)}`;
     jobUrl  = `${SOCRATA_JOBS}?$order=approved_date DESC&$limit=200&$where=${encodeURIComponent(jobWhereClause)}`;
   } else {

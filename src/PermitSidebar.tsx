@@ -203,9 +203,9 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
           value={filters.search}
           onChange={e => setSearch(e.target.value)} />
         {searchMode ? (
-          <div className="ps-search-hint">"quotes" search street + owner name only · unquoted searches all fields</div>
+          <div className="ps-search-hint">"quotes" = exact phrase match · unquoted = broad search across all fields</div>
         ) : (
-          <div className="ps-search-hint">searches within selected date range · "quotes" for exact match</div>
+          <div className="ps-search-hint">searches within selected date range · "quotes" for exact phrase</div>
         )}
       </div>
 
