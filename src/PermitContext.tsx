@@ -57,11 +57,16 @@ const LIST_LIMIT = 50_000;  // max fetched from API (Socrata cap)
 const ISO_LIMIT  = 1_000;   // OSD overlays are expensive — keep iso snappy
 const MAP_LIMIT  = 3_000;   // MapLibre GL points are cheap, higher cap fine
 
+// Earliest date with full permit type coverage (NB, GC, DM all available from 2021)
+export const MIN_DATE = '2021-01-01';
+
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function daysAgoStr(n: number) {
   const d = new Date(); d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
+  const s = d.toISOString().split('T')[0];
+  return s < MIN_DATE ? MIN_DATE : s;
 }
+function clampDate(s: string) { return s < MIN_DATE ? MIN_DATE : s; }
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
@@ -74,6 +79,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   const [view, setViewState] = useState<ViewMode>(
     window.location.pathname.endsWith('/map') ? 'map' : 'iso'
   );
+  const setDateFromClamped = useCallback((d: string) => setDateFrom(clampDate(d)), []);
   const setView = useCallback((v: ViewMode) => {
     setViewState(v);
     window.history.pushState({}, '', v === 'map' ? `${basePath}/map` : basePath || '/');
@@ -194,7 +200,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
       view, setView,
       allPermits, loading, searching, error, totalFetched, searchMode, reload: load,
       filters,
-      setDateFrom, setDateTo,
+      setDateFrom: setDateFromClamped, setDateTo,
       toggleJobType, setAllJobTypes, setNoJobTypes,
       toggleBorough,
       setSearch,

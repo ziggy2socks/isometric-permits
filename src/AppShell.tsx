@@ -60,8 +60,8 @@ export default function AppShell() {
               <div className="info-section-label">HOW TO USE</div>
               <ul className="info-list">
                 <li><strong>ISO / MAP</strong> — switch between isometric and map views. Filters carry over.</li>
-                <li><strong>Date range</strong> — filter by issue date, or use the quick buttons (1d, 7d, 30d, 90d).</li>
-                <li><strong>Search</strong> — searches the full DOB database regardless of date range. Try a street name, address, owner, or contractor.</li>
+                <li><strong>Date range</strong> — browse permits issued since January 2021. Use the quick buttons or enter any date from 2021 onward.</li>
+                <li><strong>Search</strong> — searches within your selected date range. Use "quotes" for exact phrase match. Try a street name, owner, or contractor.</li>
                 <li><strong>Click a dot or row</strong> — opens permit details including cost, status, owner, and filing number.</li>
               </ul>
 
@@ -82,7 +82,8 @@ export default function AppShell() {
               </div>
 
               <p className="info-note">
-                Data sourced from NYC Open Data (DOB NOW: Build), published with a 2–5 day lag.
+                Data sourced from NYC Open Data (DOB NOW: Build), covering permits issued January 2021–present, published with a 2–5 day lag.
+                New Building and General Construction categories were not recorded separately before 2021.
                 Provided as-is — verify with <a href="https://www.nyc.gov/site/buildings/index.page" target="_blank" rel="noopener noreferrer">NYC DOB</a> for official permit status.
               </p>
             </div>

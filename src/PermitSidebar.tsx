@@ -6,13 +6,20 @@ import React, { useCallback, useRef, useState } from 'react';
 import { FixedSizeList as VList } from 'react-window';
 
 /** Uncontrolled text input that commits valid YYYY-MM-DD on blur or Enter */
-function DateInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+function DateInput({ value, onChange, placeholder, min }: { value: string; onChange: (v: string) => void; placeholder: string; min?: string }) {
   const [draft, setDraft] = useState(value);
   const prevValue = useRef(value);
-  // Sync draft when parent value changes (e.g. quick-date button)
   if (value !== prevValue.current) { prevValue.current = value; if (draft !== value) setDraft(value); }
   const isValid = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(v).getTime());
-  const commit = () => { if (isValid(draft)) onChange(draft); else setDraft(value); };
+  const commit = () => {
+    if (isValid(draft)) {
+      const clamped = min && draft < min ? min : draft;
+      onChange(clamped);
+      if (clamped !== draft) setDraft(clamped);
+    } else {
+      setDraft(value);
+    }
+  };
   return (
     <input type="text" className="ps-date-input" value={draft}
       placeholder={placeholder} maxLength={10}
@@ -28,6 +35,7 @@ import {
   getJobColor, formatAddress, formatDate,
 } from './permit-data';
 import type { Permit } from './types';
+import { MIN_DATE } from './PermitContext';
 
 const BOROUGH_SHORT: Record<string, string> = {
   MANHATTAN: 'MN', BROOKLYN: 'BK', QUEENS: 'QN', BRONX: 'BX', 'STATEN ISLAND': 'SI',
@@ -76,7 +84,7 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
   const quickDates = [
     { label: '7d', days: 7 },
     { label: '30d', days: 30 }, { label: '90d', days: 90 },
-    { label: '1y', days: 365 }, { label: 'ALL', days: 3650 },
+    { label: '1y', days: 365 }, { label: '2021→', days: 9999 },
   ];
 
   return (
@@ -132,10 +140,11 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
             }}>↺ 7d</button>
         </div>
         <div className="ps-date-row">
-          <DateInput value={filters.dateFrom} onChange={setDateFrom} placeholder="YYYY-MM-DD" />
+          <DateInput value={filters.dateFrom} onChange={setDateFrom} placeholder="YYYY-MM-DD" min={MIN_DATE} />
           <span className="ps-date-sep">→</span>
           <DateInput value={filters.dateTo} onChange={setDateTo} placeholder="YYYY-MM-DD" />
         </div>
+        <div className="ps-date-floor-hint">data available from {MIN_DATE}</div>
         <div className="ps-quick-dates">
           {quickDates.map(({ label, days }) => {
             const from = new Date(); from.setDate(from.getDate() - days);

@@ -128,6 +128,14 @@
   margin-right: 4px;
 }
 
+.ps-date-floor-hint {
+  font-size: 9px;
+  color: var(--pp-muted);
+  opacity: 0.5;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
 .ps-search-hint {
   font-size: 9px;
   color: var(--pp-muted);
