@@ -132,6 +132,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const heliPositionsRef   = useRef<Map<string, { fromX: number; fromY: number; toX: number; toY: number; startTime: number; duration: number }>>(new Map());
   const heliRafRef         = useRef<number | null>(null);
   const heliActiveRef      = useRef(false);
+  const heliDataRef        = useRef<Map<string, HelicopterState>>(new Map());
+  const [heliTooltip, setHeliTooltip] = useState<{ heli: HelicopterState; x: number; y: number } | null>(null);
   const listRef            = useRef<List>(null);
   const permitListWrapRef  = useRef<HTMLDivElement>(null);
   const [, setPermitListHeight] = useState(0);
@@ -199,6 +201,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     const existing  = heliOverlaysRef.current;
     const positions = heliPositionsRef.current;
     const tracks    = heliTrackRef.current;
+    const dataMap   = heliDataRef.current;
     const POLL_MS   = 12000;
     const now       = performance.now();
     const seen      = new Set<string>();
@@ -206,19 +209,35 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       const { hex, lat, lon, track } = heli;
       if (isNaN(lat) || isNaN(lon)) continue;
       seen.add(hex);
+      dataMap.set(hex, heli);
       const { x: imgX, y: imgY } = latlngToImagePx(lat, lon);
       const vpX = imgX / IMAGE_DIMS.width;
       const vpY = imgY / IMAGE_DIMS.width;
-      // tracks.get(hex) available for future smooth rotation
       tracks.set(hex, track);
       let el = existing.get(hex);
       if (!el) {
         el = document.createElement('div');
         el.className = 'heli-marker';
-        el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
-        // 🚁 emoji faces LEFT natively on Apple. Flip when heading right (east).
-        const facingRight = !(track > 90 && track < 270);
-        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingRight ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
+        const facingLeft = (track > 90 && track < 270);
+        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingLeft ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
+        // Hover tooltip events — stop OSD from consuming pointer events
+        el.addEventListener('mouseenter', (e: MouseEvent) => {
+          e.stopImmediatePropagation();
+          const d = dataMap.get(hex);
+          if (d) setHeliTooltip({ heli: d, x: e.clientX, y: e.clientY });
+        });
+        el.addEventListener('mousemove', (e: MouseEvent) => {
+          e.stopImmediatePropagation();
+          const d = dataMap.get(hex);
+          if (d) setHeliTooltip({ heli: d, x: e.clientX, y: e.clientY });
+        });
+        el.addEventListener('mouseleave', (e: MouseEvent) => {
+          e.stopImmediatePropagation();
+          setHeliTooltip(null);
+        });
+        el.addEventListener('pointerdown', (e: PointerEvent) => {
+          e.stopImmediatePropagation();
+        });
         viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(vpX, vpY), placement: OpenSeadragon.Placement.CENTER });
         existing.set(hex, el);
         positions.set(hex, { fromX: vpX, fromY: vpY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
@@ -229,14 +248,12 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         const curX = cur.fromX + (cur.toX - cur.fromX) * t;
         const curY = cur.fromY + (cur.toY - cur.fromY) * t;
         positions.set(hex, { fromX: curX, fromY: curY, toX: vpX, toY: vpY, startTime: now, duration: POLL_MS });
-        // Update flip direction
         const flipSpan = el.querySelector('.heli-flip') as HTMLElement;
         if (flipSpan) flipSpan.style.transform = (track > 90 && track < 270) ? '' : 'scaleX(-1)';
       }
-      el.title = `${heli.flight || heli.hex} · ${Math.round(heli.alt_baro ?? 0).toLocaleString()}ft`;
     }
     for (const [hex, el] of existing) {
-      if (!seen.has(hex)) { viewer.removeOverlay(el); existing.delete(hex); positions.delete(hex); tracks.delete(hex); }
+      if (!seen.has(hex)) { viewer.removeOverlay(el); existing.delete(hex); positions.delete(hex); tracks.delete(hex); dataMap.delete(hex); }
     }
     // Apply current zoom scale to helis
     const zoom = viewer.viewport.getZoom();
@@ -267,7 +284,10 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     heliActiveRef.current = true;
     const poll = async () => {
       if (!heliActiveRef.current) return;
-      try { const h = await fetchHelicopters(); placeHelicopters(h); } catch {}
+      try {
+        const h = await fetchHelicopters();
+        placeHelicopters(h);
+      } catch {}
     };
     poll();
     const iv = setInterval(poll, 12000);
@@ -411,6 +431,23 @@ export default function IsoView({ flyRef }: IsoViewProps) {
           <div className="tooltip-hint">click for details</div>
         </div>
       )}
+
+      {/* Helicopter hover tag */}
+      {heliTooltip && (() => {
+        const h = heliTooltip.heli;
+        const ident = h.r ?? h.flight ?? h.hex.toUpperCase();
+        const type  = h.t ?? '';
+        const line1 = [ident, type].filter(Boolean).join(' ');
+        const alt   = Math.round(h.alt_baro ?? h.alt).toLocaleString();
+        const gs    = Math.round(h.gs);
+        const line2 = `${alt}ft @ ${gs}kt`;
+        return (
+          <div className="heli-tooltip" style={{ left: heliTooltip.x + 14, top: heliTooltip.y - 10 }}>
+            <div className="heli-tooltip-line1">{line1}</div>
+            <div className="heli-tooltip-line2">{line2}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

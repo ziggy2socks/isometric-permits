@@ -27,8 +27,31 @@ export interface HelicopterState {
   alt_baro?: number; // feet (barometric)
   track: number;     // degrees (0=N, 90=E, 180=S, 270=W)
   gs: number;        // knots ground speed
-  flight?: string;   // callsign
+  flight?: string;   // callsign/flight number
+  t?: string;        // ICAO aircraft type code (e.g. "B407", "S76")
+  r?: string;        // tail number / registration (e.g. "N911NY")
 }
+
+// Test helicopters — used for UI preview only, remove before launch
+export const TEST_HELICOPTERS: HelicopterState[] = [
+  {
+    hex: 'a1b2c3',
+    lat: 40.6892,   // Statue of Liberty
+    lon: -74.0445,
+    alt: 800, alt_baro: 800, track: 45, gs: 85,
+    flight: 'NYPD3', t: 'B407', r: 'N911NY',
+  },
+  {
+    hex: 'd4e5f6',
+    lat: 40.7580,   // Midtown Manhattan / 30 Rock
+    lon: -73.9855,
+    alt: 1200, alt_baro: 1200, track: 200, gs: 110,
+    flight: 'WABC1', t: 'EC35', r: 'N7NY',
+  },
+];
+
+// Keep singular export for any legacy references
+export const TEST_HELICOPTER = TEST_HELICOPTERS[0];
 
 export async function fetchHelicopters(): Promise<HelicopterState[]> {
   try {
@@ -59,6 +82,8 @@ export async function fetchHelicopters(): Promise<HelicopterState[]> {
       track: typeof a.track === 'number' ? a.track : 0,
       gs: typeof a.gs === 'number' ? a.gs : 0,
       flight: typeof a.flight === 'string' ? a.flight.trim() : undefined,
+      t: typeof a.t === 'string' ? a.t.toUpperCase() : undefined,
+      r: typeof a.r === 'string' ? a.r.trim() : undefined,
     }));
   } catch {
     return [];
