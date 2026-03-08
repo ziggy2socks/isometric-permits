@@ -68,13 +68,16 @@ function daysAgoStr(n: number) {
 const PermitContext = createContext<PermitContextValue | null>(null);
 
 export function PermitProvider({ children }: { children: ReactNode }) {
+  // Base path — supports both standalone ('/') and nested ('/permits') deployments
+  const basePath = window.location.pathname.startsWith('/permits') ? '/permits' : '';
+
   const [view, setViewState] = useState<ViewMode>(
-    window.location.pathname.startsWith('/map') ? 'map' : 'iso'
+    window.location.pathname.endsWith('/map') ? 'map' : 'iso'
   );
   const setView = useCallback((v: ViewMode) => {
     setViewState(v);
-    window.history.pushState({}, '', v === 'map' ? '/map' : '/');
-  }, []);
+    window.history.pushState({}, '', v === 'map' ? `${basePath}/map` : basePath || '/');
+  }, [basePath]);
 
   // Filters
   const [dateFrom, setDateFrom] = useState(daysAgoStr(7));
