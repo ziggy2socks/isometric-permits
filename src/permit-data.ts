@@ -120,7 +120,7 @@ export async function searchPermits(query: string, limit = 2000, dateFrom?: stri
   const q = query.trim();
   if (!q) return [];
 
-  // Date clause — only added when both bounds are provided
+  // Date clause
   const dateClause = (dateFrom && dateTo)
     ? ` AND issued_date >= '${dateFrom}T00:00:00' AND issued_date <= '${dateTo}T23:59:59'`
     : '';
@@ -128,10 +128,24 @@ export async function searchPermits(query: string, limit = 2000, dateFrom?: stri
     ? ` AND approved_date >= '${dateFrom}T00:00:00' AND approved_date <= '${dateTo}T23:59:59'`
     : '';
 
-  // Socrata $q= full-text search — searches all text fields, case-insensitive
-  // Quoted phrases (e.g. "oak street") are passed through as-is — Socrata supports them natively
-  const workUrl = `${SOCRATA_PERMITS}?$q=${encodeURIComponent(q)}&$order=issued_date%20DESC&$limit=${limit}&$where=latitude%20IS%20NOT%20NULL${encodeURIComponent(dateClause)}`;
-  const jobUrl  = `${SOCRATA_JOBS}?$q=${encodeURIComponent(q)}&$order=approved_date%20DESC&$limit=200&$where=latitude%20IS%20NOT%20NULL${encodeURIComponent(jobDateClause)}`;
+  // Quoted query (e.g. "oak street") → field-specific LIKE on address fields only
+  // Unquoted → $q= full-text search across all fields (owner, address, description, etc.)
+  const quotedMatch = q.match(/^"(.+)"$/);
+  let workUrl: string;
+  let jobUrl: string;
+
+  if (quotedMatch) {
+    // Exact phrase — search street_name + owner fields with LIKE
+    const phrase = quotedMatch[1].toUpperCase().replace(/'/g, "''");
+    const whereClause = `(upper(street_name) LIKE '%${phrase}%' OR upper(owner_business_name) LIKE '%${phrase}%' OR upper(owner_last_name) LIKE '%${phrase}%') AND latitude IS NOT NULL${dateClause}`;
+    const jobWhereClause = `(upper(street_name) LIKE '%${phrase}%') AND latitude IS NOT NULL${jobDateClause}`;
+    workUrl = `${SOCRATA_PERMITS}?$order=issued_date DESC&$limit=${limit}&$where=${encodeURIComponent(whereClause)}`;
+    jobUrl  = `${SOCRATA_JOBS}?$order=approved_date DESC&$limit=200&$where=${encodeURIComponent(jobWhereClause)}`;
+  } else {
+    // Broad full-text search across all fields
+    workUrl = `${SOCRATA_PERMITS}?$q=${encodeURIComponent(q)}&$order=issued_date%20DESC&$limit=${limit}&$where=latitude%20IS%20NOT%20NULL${encodeURIComponent(dateClause)}`;
+    jobUrl  = `${SOCRATA_JOBS}?$q=${encodeURIComponent(q)}&$order=approved_date%20DESC&$limit=200&$where=latitude%20IS%20NOT%20NULL${encodeURIComponent(jobDateClause)}`;
+  }
 
   // Hit Socrata directly — CORS is open (*)
   const [workRes, jobRes] = await Promise.all([

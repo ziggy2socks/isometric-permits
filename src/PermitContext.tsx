@@ -32,8 +32,6 @@ export interface PermitContextValue {
   error:          string | null;
   totalFetched:   number;
   searchMode:     boolean;    // true when search query is active
-  searchAllTime:  boolean;    // true = search ignores date range
-  setSearchAllTime: (v: boolean) => void;
   reload:         () => void;
 
   filters:        PermitFilters;
@@ -83,8 +81,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   const [dateTo,   setDateTo]   = useState(todayStr());
   const [jobTypes, setJobTypes] = useState<Set<string>>(new Set(ALL_JOB_TYPES));
   const [boroughs, setBoroughs] = useState<Set<string>>(new Set(['MANHATTAN']));
-  const [search,        setSearch]        = useState('');
-  const [searchAllTime, setSearchAllTime] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Data — date-range results
   const [allPermits,   setAllPermits]   = useState<Permit[]>([]);
@@ -134,9 +131,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
       const key = ++searchKey.current;
       try {
         // Pass date bounds unless "all time" is toggled
-        const from = searchAllTime ? undefined : dateFrom;
-        const to   = searchAllTime ? undefined : dateTo;
-        const data = await searchPermits(q, LIST_LIMIT, from, to);
+        const data = await searchPermits(q, LIST_LIMIT, dateFrom, dateTo);
         if (key !== searchKey.current) return;
         setSearchResults(data);
       } catch (e) {
@@ -147,7 +142,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
       }
     }, 800);
     return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
-  }, [search, searchAllTime, dateFrom, dateTo]);
+  }, [search, dateFrom, dateTo]);
 
   const searchMode = search.trim().length > 0;
 
@@ -194,7 +189,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   return (
     <PermitContext.Provider value={{
       view, setView,
-      allPermits, loading, searching, error, totalFetched, searchMode, searchAllTime, setSearchAllTime, reload: load,
+      allPermits, loading, searching, error, totalFetched, searchMode, reload: load,
       filters,
       setDateFrom, setDateTo,
       toggleJobType, setAllJobTypes, setNoJobTypes,
