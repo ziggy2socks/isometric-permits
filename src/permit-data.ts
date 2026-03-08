@@ -138,7 +138,7 @@ export async function searchPermits(query: string, limit = 2000, dateFrom?: stri
     // Exact phrase — LIKE across all relevant text fields
     // Must NOT use encodeURIComponent on the full URL — $ signs get stripped
     const phrase = quotedMatch[1].toUpperCase().replace(/'/g, "''");
-    const fields = ['street_name', 'owner_business_name', 'owner_last_name', 'owner_first_name', 'work_type', 'filing_status'];
+    const fields = ['street_name', 'owner_business_name', 'owner_name', 'work_type', 'filing_status'];
     const jobFields = ['street_name', 'owner_s_business_name', 'applicant_last_name', 'applicant_first_name', 'filing_representative_business_name'];
     const likeOr = (flds: string[]) => flds.map(f => `upper(${f}) LIKE '%25${encodeURIComponent(phrase)}%25'`).join('%20OR%20');
     const encDateClause = (dateFrom && dateTo)
