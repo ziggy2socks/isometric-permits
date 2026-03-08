@@ -990,8 +990,9 @@ html, body, #root {
     backdrop-filter: blur(8px);
   }
 
-  /* No tooltips on mobile — drawer bottom sheet is the interaction */
-  .tooltip {
+  /* No tooltips on mobile — touch screens don't hover */
+  .tooltip,
+  .heli-tooltip {
     display: none;
   }
 
