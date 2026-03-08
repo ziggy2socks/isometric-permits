@@ -116,14 +116,22 @@ export async function fetchPermits(
 const SOCRATA_PERMITS = 'https://data.cityofnewyork.us/resource/rbx6-tga4.json';
 const SOCRATA_JOBS    = 'https://data.cityofnewyork.us/resource/w9ak-ipjd.json';
 
-export async function searchPermits(query: string, limit = 2000): Promise<Permit[]> {
+export async function searchPermits(query: string, limit = 2000, dateFrom?: string, dateTo?: string): Promise<Permit[]> {
   const q = query.trim();
   if (!q) return [];
 
+  // Date clause — only added when both bounds are provided
+  const dateClause = (dateFrom && dateTo)
+    ? ` AND issued_date >= '${dateFrom}T00:00:00' AND issued_date <= '${dateTo}T23:59:59'`
+    : '';
+  const jobDateClause = (dateFrom && dateTo)
+    ? ` AND approved_date >= '${dateFrom}T00:00:00' AND approved_date <= '${dateTo}T23:59:59'`
+    : '';
+
   // Socrata $q= full-text search — searches all text fields, case-insensitive
-  // $q uses simple encodeURIComponent (no $ signs, no LIKE patterns — no encoding issues)
-  const workUrl = `${SOCRATA_PERMITS}?$q=${encodeURIComponent(q)}&$order=issued_date%20DESC&$limit=${limit}&$where=latitude%20IS%20NOT%20NULL`;
-  const jobUrl  = `${SOCRATA_JOBS}?$q=${encodeURIComponent(q)}&$order=approved_date%20DESC&$limit=200&$where=latitude%20IS%20NOT%20NULL`;
+  // Quoted phrases (e.g. "oak street") are passed through as-is — Socrata supports them natively
+  const workUrl = `${SOCRATA_PERMITS}?$q=${encodeURIComponent(q)}&$order=issued_date%20DESC&$limit=${limit}&$where=latitude%20IS%20NOT%20NULL${encodeURIComponent(dateClause)}`;
+  const jobUrl  = `${SOCRATA_JOBS}?$q=${encodeURIComponent(q)}&$order=approved_date%20DESC&$limit=200&$where=latitude%20IS%20NOT%20NULL${encodeURIComponent(jobDateClause)}`;
 
   // Hit Socrata directly — CORS is open (*)
   const [workRes, jobRes] = await Promise.all([

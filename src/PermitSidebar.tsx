@@ -44,7 +44,7 @@ interface Props {
 export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClose, headerActions }: Props) {
   const {
     view, setView,
-    filters, loading, searching, error, searchMode,
+    filters, loading, searching, error, searchMode, searchAllTime, setSearchAllTime,
     filtered, dotLimit,
     setDateFrom, setDateTo,
     toggleJobType, setAllJobTypes, setNoJobTypes,
@@ -107,8 +107,12 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
             <span className="ps-error">⚠ {error}</span>
           ) : (
             <>
-              {searchMode && <span className="ps-search-badge">SEARCH</span>}
               <span className="ps-count">{filtered.length.toLocaleString()} permits</span>
+              {searchMode && (
+                <span className="ps-date-context">
+                  {searchAllTime ? '· all time' : `· ${filters.dateFrom} – ${filters.dateTo}`}
+                </span>
+              )}
               {filtered.length > dotLimit && (
                 <span className="ps-limit-warn" title="Tighten filters to see all on the map.">
                   ⚠ showing {dotLimit.toLocaleString()}
@@ -195,18 +199,28 @@ export default function PermitSidebar({ onSelectPermit, mobileOpen, onMobileClos
       <div className="ps-section ps-section--search">
         <div className="ps-section-label-row">
           <span className="ps-section-label">
-            {searchMode ? '⚡ FULL DATABASE SEARCH' : 'SEARCH ALL PERMITS'}
+            {searchMode ? '⚡ SEARCH' : 'SEARCH'}
           </span>
           {searchMode && (
-            <button className="ps-reset-btn" onClick={() => setSearch('')}>✕ clear</button>
+            <button className="ps-reset-btn" onClick={() => { setSearch(''); setSearchAllTime(false); }}>✕ clear</button>
           )}
         </div>
         <input className="ps-search"
-          placeholder="123 West 57th St · solar · owner name…"
+          placeholder="oak street · contractor name · solar…"
           value={filters.search}
           onChange={e => setSearch(e.target.value)} />
-        {!searchMode && (
-          <div className="ps-search-hint">Any address, any date — ignores date range above</div>
+        {searchMode ? (
+          <div className="ps-search-controls">
+            <button
+              className={`ps-alltime-btn${searchAllTime ? ' active' : ''}`}
+              onClick={() => setSearchAllTime(!searchAllTime)}
+              title="Search entire database, ignoring date range">
+              {searchAllTime ? '◉ ALL TIME' : '○ ALL TIME'}
+            </button>
+            <span className="ps-search-hint-inline">use "quotes" for exact phrases</span>
+          </div>
+        ) : (
+          <div className="ps-search-hint">street · contractor · address · use "quotes" for exact phrases</div>
         )}
       </div>
 

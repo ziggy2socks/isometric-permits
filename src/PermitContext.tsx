@@ -32,6 +32,8 @@ export interface PermitContextValue {
   error:          string | null;
   totalFetched:   number;
   searchMode:     boolean;    // true when search query is active
+  searchAllTime:  boolean;    // true = search ignores date range
+  setSearchAllTime: (v: boolean) => void;
   reload:         () => void;
 
   filters:        PermitFilters;
@@ -81,7 +83,8 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   const [dateTo,   setDateTo]   = useState(todayStr());
   const [jobTypes, setJobTypes] = useState<Set<string>>(new Set(ALL_JOB_TYPES));
   const [boroughs, setBoroughs] = useState<Set<string>>(new Set(['MANHATTAN']));
-  const [search,   setSearch]   = useState('');
+  const [search,        setSearch]        = useState('');
+  const [searchAllTime, setSearchAllTime] = useState(false);
 
   // Data — date-range results
   const [allPermits,   setAllPermits]   = useState<Permit[]>([]);
@@ -127,10 +130,13 @@ export function PermitProvider({ children }: { children: ReactNode }) {
     const q = search.trim();
     if (!q) { setSearchResults([]); setSearching(false); return; }
     setSearching(true);
-    searchDebounce.current = setTimeout(async () => { // 800ms — wait for typing to pause
+    searchDebounce.current = setTimeout(async () => {
       const key = ++searchKey.current;
       try {
-        const data = await searchPermits(q, LIST_LIMIT);
+        // Pass date bounds unless "all time" is toggled
+        const from = searchAllTime ? undefined : dateFrom;
+        const to   = searchAllTime ? undefined : dateTo;
+        const data = await searchPermits(q, LIST_LIMIT, from, to);
         if (key !== searchKey.current) return;
         setSearchResults(data);
       } catch (e) {
@@ -141,7 +147,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
       }
     }, 800);
     return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
-  }, [search]);
+  }, [search, searchAllTime, dateFrom, dateTo]);
 
   const searchMode = search.trim().length > 0;
 
@@ -188,7 +194,7 @@ export function PermitProvider({ children }: { children: ReactNode }) {
   return (
     <PermitContext.Provider value={{
       view, setView,
-      allPermits, loading, searching, error, totalFetched, searchMode, reload: load,
+      allPermits, loading, searching, error, totalFetched, searchMode, searchAllTime, setSearchAllTime, reload: load,
       filters,
       setDateFrom, setDateTo,
       toggleJobType, setAllJobTypes, setNoJobTypes,
