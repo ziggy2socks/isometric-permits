@@ -225,8 +225,9 @@ html, body, #root {
 .heli-marker {
   font-size: 10px;
   line-height: 1;
-  pointer-events: none;
+  pointer-events: all;
   user-select: none;
+  cursor: default;
   position: relative;
   z-index: 100;
   filter: drop-shadow(0 0 3px rgba(0,0,0,0.9));
@@ -446,6 +447,30 @@ html, body, #root {
   z-index: 998;
   box-shadow: 0 0 8px 3px var(--color, #00ccff), 0 0 18px 6px var(--color, #00ccff);
   /* No animation — infinite loops on OSD overlays drag the compositor */
+}
+
+/* ── Helicopter tooltip ── */
+.heli-tooltip {
+  position: fixed;
+  z-index: 500;
+  pointer-events: none;
+  background: rgba(4, 12, 20, 0.9);
+  border: 1px solid rgba(0, 200, 220, 0.2);
+  padding: 5px 9px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.heli-tooltip-line1 {
+  font-size: 10px;
+  font-weight: 700;
+  color: #00ccdd;
+  letter-spacing: 0.8px;
+}
+.heli-tooltip-line2 {
+  font-size: 9px;
+  color: rgba(180, 220, 230, 0.65);
+  letter-spacing: 0.5px;
 }
 
 /* ── Tooltip ── */
