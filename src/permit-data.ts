@@ -161,8 +161,14 @@ export async function searchPermits(query: string, limit = 2000, dateFrom?: stri
     fetch(jobUrl,  { cache: 'no-store' }),
   ]);
 
-  if (!workRes.ok) throw new Error(`Search API ${workRes.status}`);
-  if (!jobRes.ok)  throw new Error(`Search API ${jobRes.status}`);
+  if (!workRes.ok) {
+    const body = await workRes.text().catch(() => '');
+    throw new Error(`Search API ${workRes.status}: ${body.slice(0, 120)}`);
+  }
+  if (!jobRes.ok) {
+    const body = await jobRes.text().catch(() => '');
+    throw new Error(`Search API ${jobRes.status}: ${body.slice(0, 120)}`);
+  }
 
   const workRaw: Permit[] = await workRes.json();
   const jobRaw:  Permit[] = await jobRes.json();
