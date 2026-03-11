@@ -4,7 +4,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-export function useAmbientSound(src: string, volume = 0.08) {
+export function useAmbientSound(src: string, volume = 0.04) {
   const audioRef  = useRef<HTMLAudioElement | null>(null);
   const [started, setStarted] = useState(false);
   const [muted,   setMuted]   = useState(false);

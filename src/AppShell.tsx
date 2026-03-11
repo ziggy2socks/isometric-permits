@@ -18,7 +18,7 @@ export default function AppShell() {
   const isoFlyRef = useRef<((p: Permit) => void) | null>(null);
   const [infoOpen,     setInfoOpen]     = useState(false);
   const [mobileOpen,   setMobileOpen]   = useState(false);
-  const { started, muted, toggleMute } = useAmbientSound('/nyc-ambient.mp3', 0.08);
+  const { started, muted, toggleMute } = useAmbientSound('/nyc-ambient.mp3', 0.04);
 
   const handleSidebarSelect = (p: Permit) => {
     if (view === 'iso') isoFlyRef.current?.(p);
