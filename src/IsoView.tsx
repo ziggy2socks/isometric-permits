@@ -13,7 +13,9 @@ import {
   formatAddress, formatDate,
 } from './permit-data';
 import { NeighborhoodLabels } from './NeighborhoodLabels';
-import { fetchAllAircraft, type HelicopterState } from './helicopters';
+import { fetchAllAircraft, fetchFerries, type HelicopterState } from './helicopters';
+import { fetchRecent311, getCallColor, type Live311Call } from './live311';
+import { F_TRAIN_SHAPE } from './fTrainShape';
 import { usePermits } from './PermitContext';
 import './App.css';
 
@@ -134,6 +136,11 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const heliActiveRef      = useRef(false);
   const heliDataRef        = useRef<Map<string, HelicopterState>>(new Map());
   const [heliTooltip, setHeliTooltip] = useState<{ heli: HelicopterState; x: number; y: number } | null>(null);
+  // F train line canvas
+  const fTrainCanvasRef    = useRef<HTMLCanvasElement | null>(null);
+  // 311 pulse overlays
+  const pulseOverlaysRef   = useRef<Map<string, HTMLElement>>(new Map());
+  const pulseActiveRef     = useRef(false);
   const listRef            = useRef<List>(null);
   const permitListWrapRef  = useRef<HTMLDivElement>(null);
   const [, setPermitListHeight] = useState(0);
@@ -171,6 +178,19 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       labelsRef.current = new NeighborhoodLabels(viewer);
       viewer.viewport.panTo(new OpenSeadragon.Point(0.3637, 0.3509), true);
       viewer.viewport.zoomTo(window.innerWidth <= 768 ? 10 : 3.5, undefined, true);
+      // Initial F train draw (after viewport is set)
+      setTimeout(() => drawFTrain(), 100);
+    });
+    viewer.addHandler('zoom',   () => drawFTrain());
+    viewer.addHandler('pan',    () => drawFTrain());
+    viewer.addHandler('resize', () => {
+      // Resize F train canvas to match viewer
+      const viewerEl = viewerRef.current;
+      if (fTrainCanvasRef.current && viewerEl) {
+        fTrainCanvasRef.current.width  = viewerEl.clientWidth;
+        fTrainCanvasRef.current.height = viewerEl.clientHeight;
+        drawFTrain();
+      }
     });
     // Enforce minimum helicopter size — OSD shrinks overlays proportional to 1/zoom.
     // Scale applied to inner .heli-scale div (OSD overwrites element.style.transform directly).
@@ -192,6 +212,72 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       if (heliRafRef.current !== null) { cancelAnimationFrame(heliRafRef.current); heliRafRef.current = null; }
       viewer.destroy(); osdRef.current = null;
     };
+  }, []);
+
+  // ── F train route line ──────────────────────────────────────────────────
+  const drawFTrain = useCallback(() => {
+    const viewer  = osdRef.current;
+    const canvas  = fTrainCanvasRef.current;
+    if (!viewer || !canvas) return;
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(235,104,0,0.4)';
+    ctx.lineWidth   = 1.5;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    let first = true;
+    for (const [vpX, vpY] of F_TRAIN_SHAPE) {
+      const win = viewer.viewport.viewportToWindowCoordinates(new OpenSeadragon.Point(vpX, vpY));
+      if (first) { ctx.moveTo(win.x, win.y); first = false; }
+      else ctx.lineTo(win.x, win.y);
+    }
+    ctx.stroke();
+  }, []);
+
+  // ── 311 pulse overlays ──────────────────────────────────────────────────
+  const place311Pulses = useCallback((calls: Live311Call[]) => {
+    const viewer = osdRef.current;
+    if (!viewer) return;
+    const existing = pulseOverlaysRef.current;
+    const now = Date.now();
+    const seen = new Set<string>();
+
+    for (const call of calls) {
+      if (isNaN(call.lat) || isNaN(call.lon)) continue;
+      seen.add(call.key);
+      if (existing.has(call.key)) continue; // already placed
+
+      const { x: imgX, y: imgY } = latlngToImagePx(call.lat, call.lon);
+      const vpX = imgX / IMAGE_DIMS.width;
+      const vpY = imgY / IMAGE_DIMS.width;
+      const color = getCallColor(call.type);
+
+      const el = document.createElement('div');
+      el.className = 'pulse-marker';
+      el.dataset.born = String(call.createdAt);
+      el.style.color = color;
+      el.innerHTML = `<span class="pulse-ring"></span><span class="pulse-dot"></span>`;
+      el.style.pointerEvents = 'none';
+
+      viewer.addOverlay({
+        element: el,
+        location: new OpenSeadragon.Point(vpX, vpY),
+        placement: OpenSeadragon.Placement.CENTER,
+      });
+      existing.set(call.key, el);
+    }
+
+    // Expire old pulses (older than 2 min)
+    for (const [key, el] of existing) {
+      const born = parseInt(el.dataset.born ?? '0', 10);
+      if (now - born > 120000) {
+        try { viewer.removeOverlay(el); } catch {}
+        existing.delete(key);
+      }
+    }
   }, []);
 
   // Helicopters
@@ -219,7 +305,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         el = document.createElement('div');
         el.className = 'heli-marker';
         const facingLeft = (track > 90 && track < 270);
-        const emoji = heli.kind === 'plane' ? '✈️' : '🚁';
+        const emoji = heli.kind === 'plane' ? '✈️' : heli.kind === 'ferry' ? '⛴️' : '🚁';
         el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingLeft ? 'transform:scaleX(-1)' : ''}">${emoji}</span></div>`;
         // Hover tooltip events — stop OSD from consuming pointer events
         el.addEventListener('mouseenter', (e: MouseEvent) => {
@@ -283,17 +369,41 @@ export default function IsoView({ flyRef }: IsoViewProps) {
 
   useEffect(() => {
     heliActiveRef.current = true;
-    const poll = async () => {
+    const pollAircraft = async () => {
       if (!heliActiveRef.current) return;
       try {
-        const { helis, planes } = await fetchAllAircraft();
-        placeHelicopters([...helis, ...planes]);
+        const [{ helis, planes }, ferries] = await Promise.all([
+          fetchAllAircraft(),
+          fetchFerries(),
+        ]);
+        placeHelicopters([...helis, ...planes, ...ferries]);
       } catch {}
     };
-    poll();
-    const iv = setInterval(poll, 12000);
+    pollAircraft();
+    const iv = setInterval(pollAircraft, 12000);
     return () => { heliActiveRef.current = false; clearInterval(iv); };
   }, [placeHelicopters]);
+
+  // 311 live pulse poll
+  useEffect(() => {
+    pulseActiveRef.current = true;
+    const poll311 = async () => {
+      if (!pulseActiveRef.current) return;
+      try {
+        const calls = await fetchRecent311();
+        place311Pulses(calls);
+      } catch {}
+    };
+    // Expire sweep every 15s even without new data
+    const expireSweep = () => {
+      if (!pulseActiveRef.current) return;
+      place311Pulses([]); // empty list → just triggers expiry sweep
+    };
+    poll311();
+    const iv311    = setInterval(poll311,    90000);
+    const ivExpire = setInterval(expireSweep, 15000);
+    return () => { pulseActiveRef.current = false; clearInterval(iv311); clearInterval(ivExpire); };
+  }, [place311Pulses]);
 
   // Place permit markers — synchronous, no chunking
   // Chunked RAF was causing ghost dots: old chunks kept adding after clear
@@ -446,7 +556,24 @@ export default function IsoView({ flyRef }: IsoViewProps) {
 
   return (
     <div className="iso-view">
-      <div ref={viewerRef} className="viewer" />
+      <div ref={viewerRef} className="viewer" style={{ position: 'relative' }}>
+        {/* F train route line — canvas overlay, pointer-events:none */}
+        <canvas
+          ref={el => {
+            if (el && !fTrainCanvasRef.current) {
+              const parent = el.parentElement;
+              if (parent) { el.width = parent.clientWidth; el.height = parent.clientHeight; }
+              fTrainCanvasRef.current = el;
+              drawFTrain();
+            }
+          }}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            pointerEvents: 'none', zIndex: 5,
+          }}
+        />
+      </div>
 
       {!dziLoaded && (
         <div className="loading-overlay">

@@ -31,7 +31,7 @@ export interface HelicopterState {
   flight?: string;   // callsign/flight number
   t?: string;        // ICAO aircraft type code (e.g. "B407", "S76")
   r?: string;        // tail number / registration (e.g. "N911NY")
-  kind?: 'heli' | 'plane';
+  kind?: 'heli' | 'plane' | 'ferry';
 }
 
 // Test helicopters — used for UI preview only, remove before launch
@@ -123,6 +123,42 @@ export async function fetchPlanes(): Promise<HelicopterState[]> {
   } catch {
     return [];
   }
+}
+
+/** Fetch live NYC Ferry vessel positions */
+export async function fetchFerries(): Promise<HelicopterState[]> {
+  const endpoints = [
+    'https://s3.amazonaws.com/bktransit-gtfs/nyc-ferry/vehiclepositions.json',
+    'https://dctu6gk73d2vg.cloudfront.net/gtfs-realtime/ferry-gtfs-rt/vehiclepositions.json',
+  ];
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const entities: any[] = data.entity ?? data.Entities ?? [];
+      const vessels = entities
+        .map((e: any) => e.vehicle ?? e.Vehicle)
+        .filter(Boolean)
+        .map((v: any, i: number): HelicopterState | null => {
+          const lat = v.position?.latitude  ?? v.Position?.Latitude;
+          const lon = v.position?.longitude ?? v.Position?.Longitude;
+          if (!lat || !lon) return null;
+          return {
+            hex:    v.vehicle?.id ?? v.Vehicle?.Id ?? `ferry-${i}`,
+            lat, lon,
+            alt: 0, alt_baro: 0,
+            track: v.position?.bearing ?? v.Position?.Bearing ?? 0,
+            gs: 0,
+            flight: v.vehicle?.label ?? v.Vehicle?.Label,
+            kind: 'ferry',
+          };
+        })
+        .filter((v): v is HelicopterState => v !== null);
+      if (vessels.length > 0) return vessels;
+    } catch { /* try next */ }
+  }
+  return [];
 }
 
 /** Fetch both helis and planes in one API call */

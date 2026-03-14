@@ -1059,3 +1059,30 @@ html, body, #root {
     display: none;
   }
 }
+
+/* ── 311 live pulse markers ── */
+.pulse-marker {
+  position: relative;
+  width: 0; height: 0;
+  pointer-events: none;
+}
+.pulse-ring {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  border: 1.5px solid currentColor;
+  animation: pulse-expand 1.8s ease-out infinite;
+}
+.pulse-dot {
+  position: absolute;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+  opacity: 0.9;
+}
+@keyframes pulse-expand {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(3.5); opacity: 0;   }
+}
