@@ -227,48 +227,65 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
 
+    // viewportToWindowCoordinates returns page coords — subtract canvas offset to get canvas coords
+    const canvasRect = canvas.getBoundingClientRect();
+    const toCanvas = (vpX: number, vpY: number) => {
+      const win = viewer.viewport.viewportToWindowCoordinates(new OpenSeadragon.Point(vpX, vpY));
+      // getBoundingClientRect is in CSS pixels; canvas coords need devicePixelRatio scaling
+      const dpr = window.devicePixelRatio || 1;
+      return {
+        x: (win.x - canvasRect.left) * dpr,
+        y: (win.y - canvasRect.top)  * dpr,
+      };
+    };
+
+    // Resize canvas physical pixels to match display size (handles HiDPI)
+    const dpr = window.devicePixelRatio || 1;
+    const displayW = canvas.clientWidth;
+    const displayH = canvas.clientHeight;
+    if (canvas.width !== displayW * dpr || canvas.height !== displayH * dpr) {
+      canvas.width  = displayW * dpr;
+      canvas.height = displayH * dpr;
+    }
+
     // Draw route line
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(235,104,0,0.35)';
-    ctx.lineWidth   = 1.5;
+    ctx.strokeStyle = 'rgba(235,104,0,0.4)';
+    ctx.lineWidth   = 1.5 * dpr;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
     let first = true;
     for (const [vpX, vpY] of F_TRAIN_SHAPE) {
-      const win = viewer.viewport.viewportToWindowCoordinates(new OpenSeadragon.Point(vpX, vpY));
-      if (first) { ctx.moveTo(win.x, win.y); first = false; }
-      else ctx.lineTo(win.x, win.y);
+      const p = toCanvas(vpX, vpY);
+      if (first) { ctx.moveTo(p.x, p.y); first = false; }
+      else ctx.lineTo(p.x, p.y);
     }
     ctx.stroke();
 
     // Draw live train dots
     const zoom = viewer.viewport.getZoom();
-    const dotR = Math.max(5, Math.min(10, zoom * 1.8)); // scale with zoom, 5-10px
+    const dotR = Math.max(5, Math.min(10, zoom * 1.8)) * dpr;
     for (const train of fTrainDotsRef.current) {
       const stop = F_STOP_POSITIONS[train.stopId];
       if (!stop) continue;
       const { x: imgX, y: imgY } = latlngToImagePx(stop.lat, stop.lon);
       const vpX = imgX / IMAGE_DIMS.width;
       const vpY = imgY / IMAGE_DIMS.width;
-      const win = viewer.viewport.viewportToWindowCoordinates(new OpenSeadragon.Point(vpX, vpY));
+      const p = toCanvas(vpX, vpY);
 
-      // Orange filled circle
       ctx.beginPath();
-      ctx.arc(win.x, win.y, dotR, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
       ctx.fillStyle = '#EB6800';
       ctx.fill();
-
-      // White border
       ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = dpr;
       ctx.stroke();
 
-      // "F" label
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${Math.max(6, dotR * 1.1)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('F', win.x, win.y);
+      ctx.fillText('F', p.x, p.y);
     }
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
