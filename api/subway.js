@@ -119,12 +119,12 @@ export default async function handler(req, res) {
         const routeId = readString(routeIdBufs[0]);
         if (routeId !== route) continue;
         
-        // stop_id (field 8)
-        const stopIdBufs = v[8];
+        // stop_id — GTFS-RT spec says field 8, but MTA uses field 7
+        const stopIdBufs = v[7] ?? v[8];
         const stopId = stopIdBufs ? readString(stopIdBufs[0]) : null;
-        
-        // current_status (field 9) — 1=IN_TRANSIT_TO, 2=STOPPED_AT, 3=INCOMING_AT
-        const status = v[9]?.[0] ?? 1;
+
+        // current_status — spec field 9, MTA field 4
+        const status = v[4]?.[0] ?? v[9]?.[0] ?? 1;
         
         // trip_id (field 1 in TripDescriptor)
         const tripIdBufs = trip[1];
