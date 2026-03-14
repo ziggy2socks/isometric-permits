@@ -556,24 +556,23 @@ export default function IsoView({ flyRef }: IsoViewProps) {
 
   return (
     <div className="iso-view">
-      <div ref={viewerRef} className="viewer" style={{ position: 'relative' }}>
-        {/* F train route line — canvas overlay, pointer-events:none */}
-        <canvas
-          ref={el => {
-            if (el && !fTrainCanvasRef.current) {
-              const parent = el.parentElement;
-              if (parent) { el.width = parent.clientWidth; el.height = parent.clientHeight; }
-              fTrainCanvasRef.current = el;
-              drawFTrain();
-            }
-          }}
-          style={{
-            position: 'absolute', inset: 0,
-            width: '100%', height: '100%',
-            pointerEvents: 'none', zIndex: 5,
-          }}
-        />
-      </div>
+      <div ref={viewerRef} className="viewer" />
+      {/* F train route line — canvas sibling to viewer, positioned over it */}
+      <canvas
+        ref={el => {
+          if (el && !fTrainCanvasRef.current) {
+            const viewer = viewerRef.current;
+            if (viewer) { el.width = viewer.clientWidth; el.height = viewer.clientHeight; }
+            fTrainCanvasRef.current = el;
+            drawFTrain();
+          }
+        }}
+        style={{
+          position: 'absolute', inset: 0,
+          width: '100%', height: '100%',
+          pointerEvents: 'none', zIndex: 5,
+        }}
+      />
 
       {!dziLoaded && (
         <div className="loading-overlay">
