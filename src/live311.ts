@@ -30,7 +30,9 @@ export function getCallColor(type: string): string {
 
 export async function fetchRecent311(): Promise<Live311Call[]> {
   try {
-    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    // Socrata dataset lags ~15-24h; use 4h window and strip tz suffix (Socrata needs bare ISO)
+    const sinceRaw = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+    const since = sinceRaw.replace('+00:00', '').replace('Z', '');
     const qs = [
       `$where=created_date>'${since}' AND latitude IS NOT NULL`,
       `$order=created_date DESC`,

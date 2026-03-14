@@ -131,25 +131,20 @@ export async function fetchFerries(): Promise<HelicopterState[]> {
     const res = await fetch('/api/ferry', { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json();
-    const entities: any[] = data.entity ?? data.Entities ?? [];
-    return entities
-      .map((e: any) => e.vehicle ?? e.Vehicle)
-      .filter(Boolean)
-      .map((v: any, i: number): HelicopterState | null => {
-        const lat = v.position?.latitude  ?? v.Position?.Latitude;
-        const lon = v.position?.longitude ?? v.Position?.Longitude;
-        if (!lat || !lon) return null;
-        return {
-          hex:    v.vehicle?.id ?? v.Vehicle?.Id ?? `ferry-${i}`,
-          lat, lon,
-          alt: 0, alt_baro: 0,
-          track: v.position?.bearing ?? v.Position?.Bearing ?? 0,
-          gs: 0,
-          flight: v.vehicle?.label ?? v.Vehicle?.Label,
-          kind: 'ferry',
-        };
-      })
-      .filter((v): v is HelicopterState => v !== null);
+    const vessels: any[] = data.vessels ?? [];
+    return vessels
+      .filter(v => v.lat && v.lon)
+      .map((v: any, i: number): HelicopterState => ({
+        hex:    `ferry-${i}`,
+        lat:    v.lat,
+        lon:    v.lon,
+        alt:    0,
+        alt_baro: 0,
+        track:  v.bearing ?? 0,
+        gs:     0,
+        flight: v.label ?? undefined,
+        kind:   'ferry',
+      }));
   } catch {
     return [];
   }
