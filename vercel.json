@@ -26,6 +26,10 @@
       "destination": "https://api.adsb.lol/v2/:path*"
     },
     {
+      "source": "/api/311",
+      "destination": "https://data.cityofnewyork.us/resource/erm2-nwe9.json"
+    },
+    {
       "source": "/map",
       "destination": "/index.html"
     },

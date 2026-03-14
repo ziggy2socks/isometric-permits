@@ -186,15 +186,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     });
     viewer.addHandler('zoom',   () => drawFTrain());
     viewer.addHandler('pan',    () => drawFTrain());
-    viewer.addHandler('resize', () => {
-      // Resize F train canvas to match viewer
-      const viewerEl = viewerRef.current;
-      if (fTrainCanvasRef.current && viewerEl) {
-        fTrainCanvasRef.current.width  = viewerEl.clientWidth;
-        fTrainCanvasRef.current.height = viewerEl.clientHeight;
-        drawFTrain();
-      }
-    });
+    viewer.addHandler('resize', () => { drawFTrain(); });
     // Enforce minimum helicopter size — OSD shrinks overlays proportional to 1/zoom.
     // Scale applied to inner .heli-scale div (OSD overwrites element.style.transform directly).
     // HELI_BASE_ZOOM and MIN_HELI_PX are module-level constants
@@ -222,36 +214,31 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     const viewer  = osdRef.current;
     const canvas  = fTrainCanvasRef.current;
     if (!viewer || !canvas) return;
-    const W = canvas.width, H = canvas.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, W, H);
 
-    // viewportToWindowCoordinates returns page coords — subtract canvas offset to get canvas coords
-    const canvasRect = canvas.getBoundingClientRect();
-    const toCanvas = (vpX: number, vpY: number) => {
-      const win = viewer.viewport.viewportToWindowCoordinates(new OpenSeadragon.Point(vpX, vpY));
-      // getBoundingClientRect is in CSS pixels; canvas coords need devicePixelRatio scaling
-      const dpr = window.devicePixelRatio || 1;
-      return {
-        x: (win.x - canvasRect.left) * dpr,
-        y: (win.y - canvasRect.top)  * dpr,
-      };
-    };
-
-    // Resize canvas physical pixels to match display size (handles HiDPI)
+    // Keep canvas pixel size in sync with its CSS display size
     const dpr = window.devicePixelRatio || 1;
     const displayW = canvas.clientWidth;
     const displayH = canvas.clientHeight;
-    if (canvas.width !== displayW * dpr || canvas.height !== displayH * dpr) {
-      canvas.width  = displayW * dpr;
-      canvas.height = displayH * dpr;
+    if (displayW > 0 && (canvas.width !== Math.round(displayW * dpr) || canvas.height !== Math.round(displayH * dpr))) {
+      canvas.width  = Math.round(displayW * dpr);
+      canvas.height = Math.round(displayH * dpr);
     }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw route line
+    // Use viewportToViewerElementCoordinates — returns coords relative to the OSD
+    // viewer element, which is co-located with our canvas (both cover .iso-view).
+    // Multiply by dpr to convert CSS px → physical canvas px.
+    const toCanvas = (vpX: number, vpY: number) => {
+      const el = viewer.viewport.viewportToViewerElementCoordinates(new OpenSeadragon.Point(vpX, vpY));
+      return { x: el.x * dpr, y: el.y * dpr };
+    };
+
+    // Route line
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(235,104,0,0.4)';
-    ctx.lineWidth   = 1.5 * dpr;
+    ctx.strokeStyle = 'rgba(235,104,0,0.5)';
+    ctx.lineWidth   = 2 * dpr;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
     let first = true;
@@ -262,27 +249,25 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     }
     ctx.stroke();
 
-    // Draw live train dots
+    // Live train dots
     const zoom = viewer.viewport.getZoom();
-    const dotR = Math.max(5, Math.min(10, zoom * 1.8)) * dpr;
+    const dotR = Math.max(5, Math.min(11, zoom * 2)) * dpr;
     for (const train of fTrainDotsRef.current) {
       const stop = F_STOP_POSITIONS[train.stopId];
       if (!stop) continue;
       const { x: imgX, y: imgY } = latlngToImagePx(stop.lat, stop.lon);
-      const vpX = imgX / IMAGE_DIMS.width;
-      const vpY = imgY / IMAGE_DIMS.width;
-      const p = toCanvas(vpX, vpY);
+      const p = toCanvas(imgX / IMAGE_DIMS.width, imgY / IMAGE_DIMS.width);
 
       ctx.beginPath();
       ctx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
       ctx.fillStyle = '#EB6800';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = dpr;
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = 1.5 * dpr;
       ctx.stroke();
 
       ctx.fillStyle = '#fff';
-      ctx.font = `bold ${Math.max(6, dotR * 1.1)}px sans-serif`;
+      ctx.font = `bold ${Math.round(dotR * 1.1)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('F', p.x, p.y);
@@ -627,10 +612,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       <canvas
         ref={el => {
           if (el && !fTrainCanvasRef.current) {
-            const viewer = viewerRef.current;
-            if (viewer) { el.width = viewer.clientWidth; el.height = viewer.clientHeight; }
             fTrainCanvasRef.current = el;
-            drawFTrain();
+            drawFTrain(); // drawFTrain sizes the canvas correctly using clientWidth/dpr
           }
         }}
         style={{
