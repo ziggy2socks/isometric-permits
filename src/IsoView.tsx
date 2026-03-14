@@ -16,6 +16,8 @@ import { NeighborhoodLabels } from './NeighborhoodLabels';
 import { fetchAllAircraft, fetchFerries, type HelicopterState } from './helicopters';
 import { fetchRecent311, getCallColor, type Live311Call } from './live311';
 import { F_TRAIN_SHAPE } from './fTrainShape';
+import { F_STOP_POSITIONS } from './fStopPositions';
+import { fetchFTrains, type SubwayTrain } from './subwayTrains';
 import { usePermits } from './PermitContext';
 import './App.css';
 
@@ -138,6 +140,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const [heliTooltip, setHeliTooltip] = useState<{ heli: HelicopterState; x: number; y: number } | null>(null);
   // F train line canvas
   const fTrainCanvasRef    = useRef<HTMLCanvasElement | null>(null);
+  const fTrainDotsRef      = useRef<SubwayTrain[]>([]);
   // 311 pulse overlays
   const pulseOverlaysRef   = useRef<Map<string, HTMLElement>>(new Map());
   const pulseActiveRef     = useRef(false);
@@ -223,8 +226,10 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
+
+    // Draw route line
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(235,104,0,0.4)';
+    ctx.strokeStyle = 'rgba(235,104,0,0.35)';
     ctx.lineWidth   = 1.5;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
@@ -235,6 +240,38 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       else ctx.lineTo(win.x, win.y);
     }
     ctx.stroke();
+
+    // Draw live train dots
+    const zoom = viewer.viewport.getZoom();
+    const dotR = Math.max(5, Math.min(10, zoom * 1.8)); // scale with zoom, 5-10px
+    for (const train of fTrainDotsRef.current) {
+      const stop = F_STOP_POSITIONS[train.stopId];
+      if (!stop) continue;
+      const { x: imgX, y: imgY } = latlngToImagePx(stop.lat, stop.lon);
+      const vpX = imgX / IMAGE_DIMS.width;
+      const vpY = imgY / IMAGE_DIMS.width;
+      const win = viewer.viewport.viewportToWindowCoordinates(new OpenSeadragon.Point(vpX, vpY));
+
+      // Orange filled circle
+      ctx.beginPath();
+      ctx.arc(win.x, win.y, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = '#EB6800';
+      ctx.fill();
+
+      // White border
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // "F" label
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(6, dotR * 1.1)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('F', win.x, win.y);
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
   }, []);
 
   // ── 311 pulse overlays ──────────────────────────────────────────────────
@@ -383,6 +420,18 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     const iv = setInterval(pollAircraft, 12000);
     return () => { heliActiveRef.current = false; clearInterval(iv); };
   }, [placeHelicopters]);
+
+  // F train live dot poll (every 30s)
+  useEffect(() => {
+    const poll = async () => {
+      const trains = await fetchFTrains();
+      fTrainDotsRef.current = trains;
+      drawFTrain(); // redraw with new positions
+    };
+    poll();
+    const iv = setInterval(poll, 30000);
+    return () => clearInterval(iv);
+  }, [drawFTrain]);
 
   // 311 live pulse poll
   useEffect(() => {
