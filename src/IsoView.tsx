@@ -13,11 +13,10 @@ import {
   formatAddress, formatDate,
 } from './permit-data';
 import { NeighborhoodLabels } from './NeighborhoodLabels';
-import { fetchAllAircraft, fetchFerries, type HelicopterState } from './helicopters';
-import { fetchRecent311, getCallColor, type Live311Call } from './live311';
+import { fetchAllAircraft, type HelicopterState } from './helicopters';
 import { F_TRAIN_SHAPE } from './fTrainShape';
 import { F_STOP_POSITIONS } from './fStopPositions';
-import { fetchFTrains, type SubwayTrain } from './subwayTrains';
+// fetchFerries, fetchRecent311, fetchFTrains — disabled pending bug fixes
 import { usePermits } from './PermitContext';
 import './App.css';
 
@@ -140,10 +139,9 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const [heliTooltip, setHeliTooltip] = useState<{ heli: HelicopterState; x: number; y: number } | null>(null);
   // F train line canvas
   const fTrainCanvasRef    = useRef<HTMLCanvasElement | null>(null);
-  const fTrainDotsRef      = useRef<SubwayTrain[]>([]);
-  // 311 pulse overlays
-  const pulseOverlaysRef   = useRef<Map<string, HTMLElement>>(new Map());
-  const pulseActiveRef     = useRef(false);
+  const fTrainDotsRef      = useRef<{ stopId: string; dir: string }[]>([]);
+  // 311 pulse overlays — disabled pending fixes (kept for re-enable)
+  // const pulseOverlaysRef = useRef<Map<string, HTMLElement>>(new Map());
   const listRef            = useRef<List>(null);
   const permitListWrapRef  = useRef<HTMLDivElement>(null);
   const [, setPermitListHeight] = useState(0);
@@ -276,48 +274,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     ctx.textBaseline = 'alphabetic';
   }, []);
 
-  // ── 311 pulse overlays ──────────────────────────────────────────────────
-  const place311Pulses = useCallback((calls: Live311Call[]) => {
-    const viewer = osdRef.current;
-    if (!viewer) return;
-    const existing = pulseOverlaysRef.current;
-    const now = Date.now();
-    const seen = new Set<string>();
-
-    for (const call of calls) {
-      if (isNaN(call.lat) || isNaN(call.lon)) continue;
-      seen.add(call.key);
-      if (existing.has(call.key)) continue; // already placed
-
-      const { x: imgX, y: imgY } = latlngToImagePx(call.lat, call.lon);
-      const vpX = imgX / IMAGE_DIMS.width;
-      const vpY = imgY / IMAGE_DIMS.width;
-      const color = getCallColor(call.type);
-
-      const el = document.createElement('div');
-      el.className = 'pulse-marker';
-      el.dataset.born = String(call.createdAt);
-      el.style.color = color;
-      el.innerHTML = `<span class="pulse-ring"></span><span class="pulse-dot"></span>`;
-      el.style.pointerEvents = 'none';
-
-      viewer.addOverlay({
-        element: el,
-        location: new OpenSeadragon.Point(vpX, vpY),
-        placement: OpenSeadragon.Placement.CENTER,
-      });
-      existing.set(call.key, el);
-    }
-
-    // Expire old pulses (older than 2 min)
-    for (const [key, el] of existing) {
-      const born = parseInt(el.dataset.born ?? '0', 10);
-      if (now - born > 120000) {
-        try { viewer.removeOverlay(el); } catch {}
-        existing.delete(key);
-      }
-    }
-  }, []);
+  // ── 311 pulse overlays — disabled pending fixes ─────────────────────────
+  // place311Pulses and related logic kept in live311.ts for re-enabling later
 
   // Helicopters
   const placeHelicopters = useCallback((helis: HelicopterState[]) => {
@@ -411,11 +369,9 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     const pollAircraft = async () => {
       if (!heliActiveRef.current) return;
       try {
-        const [{ helis, planes }, ferries] = await Promise.all([
-          fetchAllAircraft(),
-          fetchFerries(),
-        ]);
-        placeHelicopters([...helis, ...planes, ...ferries]);
+        const { helis } = await fetchAllAircraft();
+        // Planes and ferries hidden until overlay bugs resolved
+        placeHelicopters([...helis]);
       } catch {}
     };
     pollAircraft();
@@ -423,38 +379,20 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     return () => { heliActiveRef.current = false; clearInterval(iv); };
   }, [placeHelicopters]);
 
-  // F train live dot poll (every 30s)
-  useEffect(() => {
-    const poll = async () => {
-      const trains = await fetchFTrains();
-      fTrainDotsRef.current = trains;
-      drawFTrain(); // redraw with new positions
-    };
-    poll();
-    const iv = setInterval(poll, 30000);
-    return () => clearInterval(iv);
-  }, [drawFTrain]);
+  // F train dots — hidden until alignment + data verified
+  // useEffect(() => {
+  //   const poll = async () => { fTrainDotsRef.current = await fetchFTrains(); drawFTrain(); };
+  //   poll(); const iv = setInterval(poll, 30000); return () => clearInterval(iv);
+  // }, [drawFTrain]);
 
-  // 311 live pulse poll
-  useEffect(() => {
-    pulseActiveRef.current = true;
-    const poll311 = async () => {
-      if (!pulseActiveRef.current) return;
-      try {
-        const calls = await fetchRecent311();
-        place311Pulses(calls);
-      } catch {}
-    };
-    // Expire sweep every 15s even without new data
-    const expireSweep = () => {
-      if (!pulseActiveRef.current) return;
-      place311Pulses([]); // empty list → just triggers expiry sweep
-    };
-    poll311();
-    const iv311    = setInterval(poll311,    90000);
-    const ivExpire = setInterval(expireSweep, 15000);
-    return () => { pulseActiveRef.current = false; clearInterval(iv311); clearInterval(ivExpire); };
-  }, [place311Pulses]);
+  // 311 live pulse — hidden until Socrata lag + styling resolved
+  // useEffect(() => {
+  //   pulseActiveRef.current = true;
+  //   const poll311 = async () => { if (!pulseActiveRef.current) return; place311Pulses(await fetchRecent311()); };
+  //   const sweep   = () => { if (pulseActiveRef.current) place311Pulses([]); };
+  //   poll311(); const iv311 = setInterval(poll311, 90000); const ivE = setInterval(sweep, 15000);
+  //   return () => { pulseActiveRef.current = false; clearInterval(iv311); clearInterval(ivE); };
+  // }, [place311Pulses]);
 
   // Place permit markers — synchronous, no chunking
   // Chunked RAF was causing ghost dots: old chunks kept adding after clear
