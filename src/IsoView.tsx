@@ -14,9 +14,12 @@ import {
 } from './permit-data';
 import { NeighborhoodLabels } from './NeighborhoodLabels';
 import { fetchAllAircraft, type HelicopterState } from './helicopters';
-import { F_TRAIN_SHAPE } from './fTrainShape';
-import { F_STOP_POSITIONS } from './fStopPositions';
-// fetchFerries, fetchRecent311, fetchFTrains — disabled pending bug fixes
+// F train / 311 / ferry imports — disabled pending bug fixes
+// import { F_TRAIN_SHAPE } from './fTrainShape';
+// import { F_STOP_POSITIONS } from './fStopPositions';
+// import { fetchFerries } from './helicopters';
+// import { fetchRecent311 } from './live311';
+// import { fetchFTrains } from './subwayTrains';
 import { usePermits } from './PermitContext';
 import './App.css';
 
@@ -138,8 +141,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   const heliDataRef        = useRef<Map<string, HelicopterState>>(new Map());
   const [heliTooltip, setHeliTooltip] = useState<{ heli: HelicopterState; x: number; y: number } | null>(null);
   // F train line canvas
-  const fTrainCanvasRef    = useRef<HTMLCanvasElement | null>(null);
-  const fTrainDotsRef      = useRef<{ stopId: string; dir: string }[]>([]);
+  // const fTrainCanvasRef = useRef<HTMLCanvasElement | null>(null);   // F train — disabled
+  // const fTrainDotsRef   = useRef<{ stopId: string; dir: string }[]>([]); // F train — disabled
   // 311 pulse overlays — disabled pending fixes (kept for re-enable)
   // const pulseOverlaysRef = useRef<Map<string, HTMLElement>>(new Map());
   const listRef            = useRef<List>(null);
@@ -180,11 +183,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
       viewer.viewport.panTo(new OpenSeadragon.Point(0.3637, 0.3509), true);
       viewer.viewport.zoomTo(window.innerWidth <= 768 ? 10 : 3.5, undefined, true);
       // Initial F train draw (after viewport is set)
-      setTimeout(() => drawFTrain(), 100);
+      // F train line disabled pending alignment fix
     });
-    viewer.addHandler('zoom',   () => drawFTrain());
-    viewer.addHandler('pan',    () => drawFTrain());
-    viewer.addHandler('resize', () => { drawFTrain(); });
     // Enforce minimum helicopter size — OSD shrinks overlays proportional to 1/zoom.
     // Scale applied to inner .heli-scale div (OSD overwrites element.style.transform directly).
     // HELI_BASE_ZOOM and MIN_HELI_PX are module-level constants
@@ -207,72 +207,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     };
   }, []);
 
-  // ── F train route line ──────────────────────────────────────────────────
-  const drawFTrain = useCallback(() => {
-    const viewer  = osdRef.current;
-    const canvas  = fTrainCanvasRef.current;
-    if (!viewer || !canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Keep canvas pixel size in sync with its CSS display size
-    const dpr = window.devicePixelRatio || 1;
-    const displayW = canvas.clientWidth;
-    const displayH = canvas.clientHeight;
-    if (displayW > 0 && (canvas.width !== Math.round(displayW * dpr) || canvas.height !== Math.round(displayH * dpr))) {
-      canvas.width  = Math.round(displayW * dpr);
-      canvas.height = Math.round(displayH * dpr);
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Use viewportToViewerElementCoordinates — returns coords relative to the OSD
-    // viewer element, which is co-located with our canvas (both cover .iso-view).
-    // Multiply by dpr to convert CSS px → physical canvas px.
-    const toCanvas = (vpX: number, vpY: number) => {
-      const el = viewer.viewport.viewportToViewerElementCoordinates(new OpenSeadragon.Point(vpX, vpY));
-      return { x: el.x * dpr, y: el.y * dpr };
-    };
-
-    // Route line
-    ctx.beginPath();
-    ctx.strokeStyle = 'rgba(235,104,0,0.5)';
-    ctx.lineWidth   = 2 * dpr;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    let first = true;
-    for (const [vpX, vpY] of F_TRAIN_SHAPE) {
-      const p = toCanvas(vpX, vpY);
-      if (first) { ctx.moveTo(p.x, p.y); first = false; }
-      else ctx.lineTo(p.x, p.y);
-    }
-    ctx.stroke();
-
-    // Live train dots
-    const zoom = viewer.viewport.getZoom();
-    const dotR = Math.max(5, Math.min(11, zoom * 2)) * dpr;
-    for (const train of fTrainDotsRef.current) {
-      const stop = F_STOP_POSITIONS[train.stopId];
-      if (!stop) continue;
-      const { x: imgX, y: imgY } = latlngToImagePx(stop.lat, stop.lon);
-      const p = toCanvas(imgX / IMAGE_DIMS.width, imgY / IMAGE_DIMS.width);
-
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
-      ctx.fillStyle = '#EB6800';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-      ctx.lineWidth = 1.5 * dpr;
-      ctx.stroke();
-
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${Math.round(dotR * 1.1)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('F', p.x, p.y);
-    }
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-  }, []);
+  // ── F train route line — disabled pending alignment fix ─────────────────
+  // drawFTrain, fTrainCanvasRef, fTrainDotsRef, F_TRAIN_SHAPE, F_STOP_POSITIONS kept for re-enable
 
   // ── 311 pulse overlays — disabled pending fixes ─────────────────────────
   // place311Pulses and related logic kept in live311.ts for re-enabling later
@@ -546,20 +482,7 @@ export default function IsoView({ flyRef }: IsoViewProps) {
   return (
     <div className="iso-view">
       <div ref={viewerRef} className="viewer" />
-      {/* F train route line — canvas sibling to viewer, positioned over it */}
-      <canvas
-        ref={el => {
-          if (el && !fTrainCanvasRef.current) {
-            fTrainCanvasRef.current = el;
-            drawFTrain(); // drawFTrain sizes the canvas correctly using clientWidth/dpr
-          }
-        }}
-        style={{
-          position: 'absolute', inset: 0,
-          width: '100%', height: '100%',
-          pointerEvents: 'none', zIndex: 5,
-        }}
-      />
+      {/* F train canvas disabled pending alignment fix */}
 
       {!dziLoaded && (
         <div className="loading-overlay">
