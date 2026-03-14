@@ -1,10 +1,11 @@
-// Live helicopter data via ADS-B Exchange (adsb.lol)
-// Polls every 12 seconds, shows up to MAX_HELIS over NYC
+// Live aircraft data via ADS-B Exchange (adsb.lol)
+// Polls every 12 seconds; shows helicopters + fixed-wing over NYC
 
 const NYC_LAT = 40.75;
 const NYC_LON = -74.00;
 const DIST_NM = 25; // nautical miles radius
-const MAX_HELIS = 10;
+const MAX_HELIS   = 10;
+const MAX_PLANES  = 15;
 
 // Known helicopter ICAO type codes (Bell, Airbus, Sikorsky, Robinson, etc.)
 const HELI_TYPES = new Set([
@@ -30,6 +31,7 @@ export interface HelicopterState {
   flight?: string;   // callsign/flight number
   t?: string;        // ICAO aircraft type code (e.g. "B407", "S76")
   r?: string;        // tail number / registration (e.g. "N911NY")
+  kind?: 'heli' | 'plane';
 }
 
 // Test helicopters — used for UI preview only, remove before launch
@@ -53,6 +55,25 @@ export const TEST_HELICOPTERS: HelicopterState[] = [
 // Keep singular export for any legacy references
 export const TEST_HELICOPTER = TEST_HELICOPTERS[0];
 
+// ICAO category codes for fixed-wing (A1=light, A2=small, A3=large, A4=high-vortex, A5=heavy)
+const PLANE_CATEGORIES = new Set(['A1','A2','A3','A4','A5']);
+
+function mapAircraft(a: any, kind: 'heli' | 'plane'): HelicopterState {
+  return {
+    hex: a.hex,
+    lat: a.lat,
+    lon: a.lon,
+    alt: typeof a.alt_baro === 'number' ? a.alt_baro : 0,
+    alt_baro: typeof a.alt_baro === 'number' ? a.alt_baro : undefined,
+    track: typeof a.track === 'number' ? a.track : 0,
+    gs: typeof a.gs === 'number' ? a.gs : 0,
+    flight: typeof a.flight === 'string' ? a.flight.trim() : undefined,
+    t: typeof a.t === 'string' ? a.t.toUpperCase() : undefined,
+    r: typeof a.r === 'string' ? a.r.trim() : undefined,
+    kind,
+  };
+}
+
 export async function fetchHelicopters(): Promise<HelicopterState[]> {
   try {
     const res = await fetch(
@@ -70,22 +91,75 @@ export async function fetchHelicopters(): Promise<HelicopterState[]> {
       return isHeliType && notGround && a.lat && a.lon;
     });
 
-    // Sort by altitude ascending (lowest = most interesting, closest to map)
     helis.sort((a, b) => (a.alt_baro ?? 9999) - (b.alt_baro ?? 9999));
-
-    return helis.slice(0, MAX_HELIS).map(a => ({
-      hex: a.hex,
-      lat: a.lat,
-      lon: a.lon,
-      alt: typeof a.alt_baro === 'number' ? a.alt_baro : 0,
-      alt_baro: typeof a.alt_baro === 'number' ? a.alt_baro : undefined,
-      track: typeof a.track === 'number' ? a.track : 0,
-      gs: typeof a.gs === 'number' ? a.gs : 0,
-      flight: typeof a.flight === 'string' ? a.flight.trim() : undefined,
-      t: typeof a.t === 'string' ? a.t.toUpperCase() : undefined,
-      r: typeof a.r === 'string' ? a.r.trim() : undefined,
-    }));
+    return helis.slice(0, MAX_HELIS).map(a => mapAircraft(a, 'heli'));
   } catch {
     return [];
+  }
+}
+
+export async function fetchPlanes(): Promise<HelicopterState[]> {
+  try {
+    const res = await fetch(
+      `/api/adsb/lat/${NYC_LAT}/lon/${NYC_LON}/dist/${DIST_NM}`,
+      { cache: 'no-store' }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const ac: any[] = data.ac ?? [];
+
+    const planes = ac.filter(a => {
+      const t: string = (a.t ?? '').toUpperCase();
+      const cat: string = (a.category ?? '').toUpperCase();
+      const isHeliType = HELI_TYPES.has(t) || t.startsWith('H');
+      const isPlane = PLANE_CATEGORIES.has(cat) && !isHeliType;
+      const notGround = a.alt_baro !== 'ground' && typeof a.alt_baro === 'number';
+      return isPlane && notGround && a.lat && a.lon;
+    });
+
+    // Sort by altitude ascending — lower planes more interesting visually
+    planes.sort((a, b) => (a.alt_baro ?? 99999) - (b.alt_baro ?? 99999));
+    return planes.slice(0, MAX_PLANES).map(a => mapAircraft(a, 'plane'));
+  } catch {
+    return [];
+  }
+}
+
+/** Fetch both helis and planes in one API call */
+export async function fetchAllAircraft(): Promise<{ helis: HelicopterState[]; planes: HelicopterState[] }> {
+  try {
+    const res = await fetch(
+      `/api/adsb/lat/${NYC_LAT}/lon/${NYC_LON}/dist/${DIST_NM}`,
+      { cache: 'no-store' }
+    );
+    if (!res.ok) return { helis: [], planes: [] };
+    const data = await res.json();
+    const ac: any[] = data.ac ?? [];
+
+    const heliList: any[] = [];
+    const planeList: any[] = [];
+
+    for (const a of ac) {
+      const t: string = (a.t ?? '').toUpperCase();
+      const cat: string = (a.category ?? '').toUpperCase();
+      const notGround = a.alt_baro !== 'ground' && typeof a.alt_baro === 'number';
+      if (!notGround || !a.lat || !a.lon) continue;
+
+      if (HELI_TYPES.has(t) || t.startsWith('H')) {
+        heliList.push(a);
+      } else if (PLANE_CATEGORIES.has(cat)) {
+        planeList.push(a);
+      }
+    }
+
+    heliList.sort((a, b) => (a.alt_baro ?? 9999) - (b.alt_baro ?? 9999));
+    planeList.sort((a, b) => (a.alt_baro ?? 99999) - (b.alt_baro ?? 99999));
+
+    return {
+      helis:  heliList.slice(0, MAX_HELIS).map(a => mapAircraft(a, 'heli')),
+      planes: planeList.slice(0, MAX_PLANES).map(a => mapAircraft(a, 'plane')),
+    };
+  } catch {
+    return { helis: [], planes: [] };
   }
 }

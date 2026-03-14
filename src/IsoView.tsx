@@ -13,7 +13,7 @@ import {
   formatAddress, formatDate,
 } from './permit-data';
 import { NeighborhoodLabels } from './NeighborhoodLabels';
-import { fetchHelicopters, type HelicopterState } from './helicopters';
+import { fetchAllAircraft, type HelicopterState } from './helicopters';
 import { usePermits } from './PermitContext';
 import './App.css';
 
@@ -219,7 +219,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         el = document.createElement('div');
         el.className = 'heli-marker';
         const facingLeft = (track > 90 && track < 270);
-        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingLeft ? 'transform:scaleX(-1)' : ''}">🚁</span></div>`;
+        const emoji = heli.kind === 'plane' ? '✈️' : '🚁';
+        el.innerHTML = `<div class="heli-scale"><span class="heli-flip" style="display:inline-block;font-size:10px;${facingLeft ? 'transform:scaleX(-1)' : ''}">${emoji}</span></div>`;
         // Hover tooltip events — stop OSD from consuming pointer events
         el.addEventListener('mouseenter', (e: MouseEvent) => {
           e.stopImmediatePropagation();
@@ -285,8 +286,8 @@ export default function IsoView({ flyRef }: IsoViewProps) {
     const poll = async () => {
       if (!heliActiveRef.current) return;
       try {
-        const h = await fetchHelicopters();
-        placeHelicopters(h);
+        const { helis, planes } = await fetchAllAircraft();
+        placeHelicopters([...helis, ...planes]);
       } catch {}
     };
     poll();
@@ -477,10 +478,13 @@ export default function IsoView({ flyRef }: IsoViewProps) {
         </div>
       )}
 
-      {/* Helicopter hover tag */}
+      {/* Aircraft hover tag (helicopter or plane) */}
       {heliTooltip && (() => {
         const h = heliTooltip.heli;
-        const ident = h.r ?? h.flight ?? h.hex.toUpperCase();
+        // Planes: show flight number first (e.g. UAL123), then tail; helis: tail first
+        const ident = h.kind === 'plane'
+          ? (h.flight ?? h.r ?? h.hex.toUpperCase())
+          : (h.r ?? h.flight ?? h.hex.toUpperCase());
         const type  = h.t ?? '';
         const line1 = [ident, type].filter(Boolean).join(' ');
         const alt   = Math.round(h.alt_baro ?? h.alt).toLocaleString();
